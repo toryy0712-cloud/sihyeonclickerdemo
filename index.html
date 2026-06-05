@@ -1,0 +1,1464 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sihyun Clicker v6.4 (Raid & Golden Cookie Multi-Edition)</title>
+    
+    <link rel="icon" type="image/jpeg" href="1000000883.jpg">
+    <link rel="shortcut icon" type="image/jpeg" href="1000000883.jpg">
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
+        }
+
+        body {
+            background-color: #0c1017;
+            color: #ffffff;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            user-select: none;
+            -webkit-user-select: none;
+            position: relative;
+        }
+
+        /* --- 상단 글로벌 네비게이션 바 --- */
+        #topNavBar {
+            height: 45px;
+            background-color: #06090e;
+            border-bottom: 1px solid #222c3c;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            font-size: 13px;
+            z-index: 10;
+        }
+
+        .nav-left { color: #8b9bb4; }
+        .nav-left .user-highlight { color: #00ffcc; font-weight: bold; }
+
+        .nav-center-btn {
+            background: linear-gradient(180deg, #2b3a4a, #1a232e);
+            border: 1px solid #41556c;
+            color: #a4b8cf;
+            padding: 5px 20px;
+            border-radius: 15px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .nav-center-btn:hover { border-color: #ff0055; color: #ffffff; }
+
+        .nav-logout-btn {
+            background-color: #cc3333; color: #ffffff; border: none;
+            padding: 6px 14px; font-size: 12px; font-weight: bold;
+            border-radius: 4px; cursor: pointer;
+        }
+        .nav-logout-btn:hover { background-color: #ff4444; }
+
+        /* 회원가입 / 로그인 인증 오버레이 */
+        #authOverlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(6, 9, 14, 0.98); z-index: 9999;
+            display: flex; justify-content: center; align-items: center;
+        }
+        .auth-container {
+            background-color: #121824; border: 1px solid #222c3c;
+            padding: 40px; border-radius: 10px; width: 400px;
+        }
+        .auth-tab-buttons { display: flex; margin-bottom: 30px; border-bottom: 2px solid #222c3c; }
+        .auth-tab {
+            flex: 1; padding: 12px; background: none; border: none;
+            color: #62738d; font-size: 16px; font-weight: bold; cursor: pointer;
+        }
+        .auth-tab.active { color: #00ffcc; border-bottom: 2px solid #00ffcc; }
+        .auth-form { display: none; }
+        .auth-form.active { display: block; }
+        .auth-input-group { margin-bottom: 20px; }
+        .auth-input-group label { display: block; font-size: 12px; color: #8b9bb4; margin-bottom: 8px; }
+        .auth-input-group input {
+            width: 100%; background-color: #1c2434; border: 1px solid #222c3c;
+            padding: 12px; color: #ffffff; font-size: 16px; border-radius: 5px; outline: none;
+        }
+        .auth-btn {
+            width: 100%; background-color: #00ffcc; color: #000000; border: none;
+            padding: 14px; font-size: 16px; font-weight: bold; border-radius: 5px; cursor: pointer;
+        }
+
+        /* 메인 레이아웃 3단 분할 */
+        #mainContainer { flex: 1; display: flex; overflow: hidden; }
+
+        /* 좌측 영역 (골든 쿠키 스폰을 위해 relative 지정) */
+        #leftPanel {
+            width: 25%; border-right: 1px solid #222c3c; padding: 20px;
+            display: flex; flex-direction: column; align-items: center;
+            background-color: #090d14; text-align: center; position: relative;
+        }
+        .left-meta-author { font-size: 12px; color: #4f5d73; align-self: flex-start; margin-bottom: 40px; }
+        .left-meta-author span { color: #00ffcc; }
+        .bakery-title { font-size: 26px; font-weight: bold; color: #ffffff; margin-bottom: 10px; }
+        #scoreDisplay { font-size: 32px; font-weight: bold; color: #38bdf8; margin-bottom: 40px; }
+        #cookieContainer { position: relative; cursor: pointer; transition: transform 0.05s; margin-top: 20px; }
+        #cookieContainer:active { transform: scale(0.96); }
+        #cookieImg { width: 260px; height: 260px; border-radius: 50%; object-fit: cover; border: 4px solid #1e293b; }
+
+        /* ⚡ 돌발 골든 쿠키 인프라 스타일 */
+        .golden-cookie-entity {
+            position: absolute; width: 55px; height: 55px; background-color: #eab308;
+            border: 3px solid #facc15; border-radius: 50%; display: flex; align-items: center;
+            justify-content: center; font-size: 24px; cursor: pointer; z-index: 999;
+            box-shadow: 0 0 20px #eab308; animation: pulseGlow 0.5s infinite alternate;
+        }
+        @keyframes pulseGlow { 0% { transform: scale(1); box-shadow: 0 0 10px #eab308; } 100% { transform: scale(1.15); box-shadow: 0 0 25px #facc15; } }
+
+        /* 중간 영역 */
+        #centerPanel {
+            width: 40%; display: flex; flex-direction: column; padding: 15px 20px;
+            background-color: #0c1017; overflow-y: auto;
+        }
+        .center-toggle-bar {
+            text-align: center; border: 1px solid #222c3c; background-color: #090d14;
+            padding: 10px; color: #8b9bb4; font-size: 15px; font-weight: bold; cursor: pointer;
+        }
+        
+        #toggleSubPanel { background-color: #090d14; border: 1px solid #222c3c; border-top: none; padding: 15px; margin-bottom: 15px; display: none; }
+        .panel-section-title { font-size: 12px; color: #8b9bb4; margin-bottom: 8px; font-weight: bold; }
+        .user-pw-change-box { display: flex; gap: 8px; margin-bottom: 15px; border-bottom: 1px dashed #222c3c; padding-bottom: 15px; }
+        .user-pw-change-box input { flex: 1; background-color: #121824; border: 1px solid #222c3c; padding: 8px; color: white; border-radius: 4px; outline: none; font-size: 13px; }
+        .user-pw-change-btn { background-color: #2563eb; color: white; border: none; padding: 8px 12px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 12px; }
+        .user-pw-change-btn:hover { background-color: #3b82f6; }
+        
+        .user-msg-admin-box { display: flex; gap: 8px; margin-bottom: 15px; border-bottom: 1px dashed #222c3c; padding-bottom: 15px; }
+        .user-msg-admin-box input { flex: 1; background-color: #121824; border: 1px solid #222c3c; padding: 8px; color: white; border-radius: 4px; outline: none; font-size: 13px; }
+        .user-msg-admin-btn { background-color: #10b981; color: white; border: none; padding: 8px 12px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 12px; }
+        .user-msg-admin-btn:hover { background-color: #059669; }
+        .reset-game-btn { background-color: #b91c1c; color: #ffffff; border: 1px solid #ef4444; padding: 8px 16px; font-weight: bold; border-radius: 4px; cursor: pointer; width: 100%; }
+
+        /* ⚔️ 월드 실시간 라이브 보스 레이드 UI 보드 컴포넌트 */
+        .raid-boss-container {
+            border: 2px solid #ef4444; background: linear-gradient(180deg, #2d0b0b, #0f0303);
+            border-radius: 6px; padding: 15px; text-align: center; margin-bottom: 15px; display: none;
+        }
+        .boss-name-tag { font-size: 16px; font-weight: bold; color: #f87171; text-shadow: 0 0 8px #ef4444; margin-bottom: 4px; }
+        .boss-hp-frame { background-color: #1e0505; border: 1px solid #7f1d1d; height: 18px; border-radius: 9px; overflow: hidden; position: relative; margin-bottom: 6px; }
+        .boss-hp-bar { width: 100%; height: 100%; background: linear-gradient(90deg, #dc2626, #ef4444); transition: width 0.2s ease-out; }
+        .boss-hp-text { position: absolute; width: 100%; height: 100%; top: 0; left: 0; font-size: 11px; font-weight: bold; display: flex; align-items: center; justify-content: center; color: #ffffff; }
+
+        .prestige-altar-box { border: 2px solid #a855f7; background: linear-gradient(180deg, #1e1135, #0f081d); border-radius: 6px; padding: 20px; text-align: center; margin-bottom: 15px; }
+        .altar-title { color: #e9d5ff; font-size: 15px; font-weight: bold; margin-bottom: 6px; }
+        .altar-desc { color: #c084fc; font-size: 11px; margin-bottom: 15px; }
+        .altar-btn { background-color: #a855f7; color: #ffffff; border: none; width: 70%; padding: 10px; font-weight: bold; border-radius: 4px; cursor: pointer; }
+
+        .status-info-box { background-color: #090d14; border: 1px solid #1e293b; padding: 15px; border-radius: 5px; margin-bottom: 15px; font-size: 13px; line-height: 1.8; }
+
+        .gacha-box { border: 1px dashed #1d4ed8; background-color: #070f1e; border-radius: 6px; padding: 15px; text-align: center; margin-bottom: 15px; }
+        .gacha-title { color: #3b82f6; font-size: 15px; font-weight: bold; margin-bottom: 6px; }
+        .gacha-desc { color: #60a5fa; font-size: 11px; margin-bottom: 12px; }
+        .mini-badge-row { display: flex; justify-content: center; gap: 12px; margin-top: 15px; border-top: 1px solid #131e31; padding-top: 12px; }
+        .mini-badge-slot { width: 32px; height: 32px; background-color: #0c121e; border: 1px solid #1e293b; border-radius: 4px; display: flex; align-items: center; justify-content: center; opacity: 0.2; font-size: 16px; }
+        .mini-badge-slot.unlocked { opacity: 1; border-color: #eab308; background-color: #1e1b10; }
+
+        /* 💬 실시간 월드/1:1 채팅방 스타일 */
+        .chat-room-container { border: 1px solid #222c3c; background-color: #090d14; border-radius: 6px; display: flex; flex-direction: column; height: 250px; margin-top: auto; }
+        .chat-header { background-color: #121824; padding: 8px 12px; font-size: 12px; font-weight: bold; color: #00ffcc; border-bottom: 1px solid #222c3c; display: flex; justify-content: space-between; }
+        .chat-messages { flex: 1; padding: 10px; overflow-y: auto; font-size: 12px; display: flex; flex-direction: column; gap: 6px; }
+        .chat-msg-row { line-height: 1.4; word-break: break-all; }
+        .chat-user { color: #38bdf8; font-weight: bold; cursor: pointer; text-decoration: underline; }
+        .chat-admin-user { color: #ff0055; font-weight: bold; cursor: pointer; text-decoration: underline; }
+        .chat-dm-label { color: #ffaa00; font-weight: bold; background-color: #2a1a00; padding: 1px 4px; border-radius: 3px; margin-right: 4px; }
+        .chat-input-row { display: flex; border-top: 1px solid #222c3c; background-color: #0c1017; }
+        .chat-input-row input { flex: 1; background: none; border: none; padding: 10px; color: white; outline: none; font-size: 13px; }
+        .chat-send-btn { background-color: #1c2434; border: none; color: #8b9bb4; padding: 0 15px; cursor: pointer; font-size: 12px; }
+        .chat-send-btn:hover { color: white; background-color: #222c3c; }
+
+        /* 우측 영역 (상점 스크롤 디자인 반영) */
+        #rightPanel { width: 35%; border-left: 1px solid #222c3c; display: flex; flex-direction: column; background-color: #090d14; overflow: hidden; }
+        .store-header-title { font-size: 22px; font-weight: bold; text-align: center; padding: 15px 0 10px 0; letter-spacing: 2px; }
+        
+        /* 🛒 상점 시스템 제어 바 고도화 */
+        .store-control-bar { display: flex; flex-direction: column; padding: 0 15px; margin-bottom: 12px; gap: 8px; }
+        .store-main-tabs { display: flex; background-color: #0c1017; border: 1px solid #222c3c; border-radius: 4px; overflow: hidden; }
+        .store-tab-btn { flex: 1; padding: 8px; font-size: 12px; font-weight: bold; background: none; border: none; color: #4f5d73; cursor: pointer; text-align: center; }
+        .store-tab-btn.active.mode-buy { background-color: #10b981; color: #ffffff; }
+        .store-tab-btn.active.mode-sell { background-color: #ef4444; color: #ffffff; }
+        
+        .store-amount-tabs { display: flex; background-color: #0c1017; border: 1px solid #222c3c; border-radius: 4px; overflow: hidden; }
+        .amount-tab-btn { flex: 1; padding: 6px; font-size: 11px; font-weight: bold; background: none; border: none; color: #4f5d73; cursor: pointer; text-align: center; }
+        .amount-tab-btn.active { background-color: #2563eb; color: #ffffff; }
+
+        /* 📜 상점 영역 스크롤바 최적화 */
+        .scroll-container { flex: 1; overflow-y: auto; padding: 0 15px 15px 15px; }
+        .scroll-container::-webkit-scrollbar { width: 6px; }
+        .scroll-container::-webkit-scrollbar-track { background: #090d14; }
+        .scroll-container::-webkit-scrollbar-thumb { background: #222c3c; border-radius: 3px; }
+        .scroll-container::-webkit-scrollbar-thumb:hover { background: #38bdf8; }
+
+        .shop-item { display: flex; align-items: center; background-color: #0f1622; border: 1px solid #1e293b; padding: 10px 12px; margin-bottom: 8px; border-radius: 4px; cursor: pointer; }
+        .shop-item:hover { border-color: #334155; background-color: #141d2f; }
+        .shop-item.disabled { opacity: 0.4; }
+        .item-icon-placeholder { width: 36px; height: 36px; background-color: #1c2635; border-radius: 4px; margin-right: 12px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+        .item-info { flex: 1; }
+        .item-name { font-size: 14px; font-weight: bold; color: #ffffff; margin-bottom: 2px; }
+        .item-cost { font-size: 12px; color: #e2e8f0; display: flex; align-items: center; gap: 4px; }
+        .item-cost::before { content: "🍪"; font-size: 11px; }
+        .item-count { font-size: 22px; font-weight: bold; color: #38bdf8; }
+
+        .spec-upgrade-row { display: flex; gap: 8px; margin-bottom: 12px; justify-content: flex-end; padding: 0 15px; }
+        .spec-mini-card { background-color: #121824; border: 1px solid #222c3c; border-radius: 4px; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; font-size: 18px; cursor: pointer; }
+        .spec-mini-card.owned { border-color: #eab308; background-color: #231f13; }
+
+        .floating-text { position: absolute; color: #38bdf8; font-weight: bold; font-size: 22px; pointer-events: none; animation: floatUp 0.8s ease-out forwards; text-shadow: 0 0 6px rgba(0,0,0,1); z-index: 1000; }
+        @keyframes floatUp { 0% { transform: translateY(0) scale(1); opacity: 1; } 100% { transform: translateY(-80px) scale(0.8); opacity: 0; } }
+
+        /* 모달 인프라 스크롤 최적화 */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.85); z-index: 10000; display: flex; justify-content: center; align-items: center; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
+        .modal-overlay.active { opacity: 1; pointer-events: auto; }
+        .modal-box { background-color: #0c1017; border: 1px solid #ff0055; width: 540px; max-height: 95vh; border-radius: 8px; display: flex; flex-direction: column; overflow: hidden; }
+        .modal-header { padding: 15px 20px; border-bottom: 1px solid #222c3c; display: flex; justify-content: space-between; align-items: center; background-color: #090d14; }
+        .modal-title { font-size: 14px; font-weight: bold; color: #ff0055; letter-spacing: 1px; }
+        
+        .modal-body { padding: 20px; overflow-y: auto; flex: 1; }
+        .modal-body::-webkit-scrollbar { width: 6px; }
+        .modal-body::-webkit-scrollbar-thumb { background: #ff0055; border-radius: 3px; }
+
+        .form-group { margin-bottom: 12px; }
+        .form-group label { display: block; font-size: 11px; color: #8b9bb4; margin-bottom: 6px; }
+        .form-group input, .form-group select { width: 100%; background-color: #121824; border: 1px solid #222c3c; padding: 10px; color: #ffffff; font-size: 14px; border-radius: 4px; outline: none; }
+        
+        .admin-action-row { display: flex; gap: 8px; margin-bottom: 10px; }
+        .admin-action-btn { flex: 1; padding: 10px; font-size: 12px; font-weight: bold; border-radius: 4px; border: none; cursor: pointer; color: white; text-align: center; }
+        .btn-plus { background-color: #10b981; }
+        .btn-minus { background-color: #ef4444; }
+        .btn-ban { background-color: #d97706; }
+        .btn-unban { background-color: #2563eb; }
+        .btn-purple { background-color: #8b5cf6; }
+        
+        .admin-btn-danger { background-color: #b91c1c; color: white; width: 100%; padding: 12px; border: none; border-radius: 4px; font-weight: bold; font-size: 13px; margin-top: 5px; cursor: pointer; }
+        .admin-section-title { font-size: 12px; color: #8b9bb4; margin: 18px 0 8px 0; border-bottom: 1px dashed #222c3c; padding-bottom: 4px; font-weight: bold; }
+        .admin-footer-controls { display: flex; gap: 10px; padding: 15px 20px; background-color: #090d14; border-top: 1px solid #222c3c; }
+        .footer-exit-btn { flex: 1; padding: 12px; font-size: 13px; font-weight: bold; border-radius: 4px; border: none; cursor: pointer; }
+        .exit-keep { background-color: #2563eb; color: white; }
+        .exit-turnoff { background-color: #4b5563; color: white; }
+
+        .admin-ticket-feed { background-color: #06090e; border: 1px dashed #ff0055; padding: 10px; border-radius: 4px; max-height: 200px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+        .ticket-row { background-color: #121824; border: 1px solid #222c3c; padding: 8px; border-radius: 4px; font-size: 12px; line-height: 1.4; }
+        .ticket-meta { font-size: 10px; color: #8b9bb4; margin-bottom: 4px; display: flex; justify-content: space-between; border-bottom: 1px solid #1c2434; padding-bottom: 3px; }
+    </style>
+</head>
+<body>
+
+    <div id="topNavBar">
+        <div class="nav-left">
+            현재 로그인 계정: <span id="navUserId" class="user-highlight">-</span>
+            <span id="adminCheatBadge" style="display:none; margin-left: 10px; background-color: #ff0055; color: white; padding: 2px 6px; font-size: 11px; font-weight: bold; border-radius: 3px;">👑 관리자 치트 활성화 (상점/환생 무료)</span>
+        </div>
+        <button class="nav-center-btn" onclick="openAdminModal()">관리자모드</button>
+        <button class="nav-logout-btn" onclick="handleLogout()">로그아웃 (정지)</button>
+    </div>
+
+    <div id="authOverlay">
+        <div class="auth-container">
+            <div class="auth-tab-buttons">
+                <button class="auth-tab active" onclick="switchAuthTab('login')">로그인</button>
+                <button class="auth-tab" onclick="switchAuthTab('register')">회원가입</button>
+            </div>
+
+            <div id="loginForm" class="auth-form active">
+                <div class="auth-input-group">
+                    <label>아이디</label>
+                    <input type="text" id="loginId" autocomplete="off">
+                </div>
+                <div class="auth-input-group">
+                    <label>비밀번호</label>
+                    <input type="password" id="loginPw">
+                </div>
+                <button class="auth-btn" onclick="handleLogin()">게임 접속</button>
+            </div>
+
+            <div id="registerForm" class="auth-form">
+                <div class="auth-input-group">
+                    <label>새 아이디</label>
+                    <input type="text" id="regId" autocomplete="off">
+                </div>
+                <div class="auth-input-group">
+                    <label>비밀번호</label>
+                    <input type="password" id="regPw">
+                </div>
+                <button class="auth-btn" onclick="handleRegister()">계정 생성</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="mainContainer">
+        
+        <div id="leftPanel">
+            <div class="left-meta-author">Made by <span>시현, 이수</span> 6.0v</div>
+            <div class="bakery-title">이시현의 제과점</div>
+            <div id="scoreDisplay">0 시현</div>
+            
+            <div id="cookieContainer" onclick="handleCookieClick(event)">
+                <img id="cookieImg" src="1000000883.jpg" alt="Clicker Target">
+            </div>
+        </div>
+
+        <div id="centerPanel">
+            <div class="center-toggle-bar" onclick="toggleSettingArea()">설정 영역 토글</div>
+            
+            <div id="toggleSubPanel">
+                <div class="panel-section-title">🔒 현재 계정 비밀번호 변경</div>
+                <div class="user-pw-change-box">
+                    <input type="password" id="userNewPwInput" placeholder="변경할 새 비밀번호 입력">
+                    <button class="user-pw-change-btn" onclick="executeUserPasswordChange()">변경하기</button>
+                </div>
+
+                <div class="panel-section-title">📬 관리자에게 1:1 건의/문의 메시지 전송</div>
+                <div class="user-msg-admin-box">
+                    <input type="text" id="userToAdminMsgInput" placeholder="관리자에게 전달할 문의 내용을 입력하세요...">
+                    <button class="user-msg-admin-btn" onclick="sendTicketToAdmin()">보내기</button>
+                </div>
+
+                <div class="panel-section-title">⚠️ 데이터 위기 관리</div>
+                <button class="reset-game-btn" onclick="triggerResetGame()">게임 데이터 전체 초기화</button>
+            </div>
+
+            <div class="raid-boss-container" id="raidBossUIPanel">
+                <div class="boss-name-tag">😈 전 서버 월드 레이드 보스: [진·보스시현] 😈</div>
+                <div class="boss-hp-frame">
+                    <div class="boss-hp-bar" id="bossHpBarFill"></div>
+                    <div class="boss-hp-text" id="bossHpBarText">100,000,000,000,000 / 100,000,000,000,000</div>
+                </div>
+                <div style="font-size: 11px; color: #fca5a5;">※ 전 서버 유저들과 합심하여 타격하세요! 클릭 및 SPS가 대미지로 치환됩니다.</div>
+            </div>
+            
+            <div class="prestige-altar-box">
+                <div class="altar-title">✨ 은하계 환생 제단</div>
+                <div class="altar-desc">환생 시 소지금은 초기화되지만 기본 효율이 영구히 폭발적으로 상승합니다.</div>
+                <button class="altar-btn" id="prestigeBtn" onclick="triggerPrestige()">다음 환생 비용: 10,000,000 시현</button>
+            </div>
+
+            <div class="status-info-box">
+                <div>초당 생산량 (SPS) : <span id="centerSpsVal" style="color:#00ffcc; font-weight:bold;">0</span></div>
+                <div>총 환생 횟수 : <span id="centerPrestigeVal" style="color:#a855f7; font-weight:bold;">0</span>회</div>
+                <div style="margin-top: 3px; font-size:11px; color:#62738d;">누적 원격 클릭수: <span id="centerClicksVal">0</span>회</div>
+            </div>
+
+            <div class="gacha-box">
+                <div class="gacha-title">🔮 고대 유물 무작위 뽑기 상자</div>
+                <div class="gacha-desc">보유 중인 유물은 SPS 배율 증가!</div>
+                
+                <div class="mini-badge-row">
+                    <div class="mini-badge-slot" id="mini_badge_welcome" title="첫 발걸음">🎉</div>
+                    <div class="mini-badge-slot" id="mini_badge_click100" title="클릭커">⚡</div>
+                    <div class="mini-badge-slot" id="mini_badge_cookieMaster" title="쿠키 거상">🍪</div>
+                    <div class="mini-badge-slot" id="mini_badge_scrollMaster" title="주문서 광신도">📜</div>
+                </div>
+            </div>
+
+            <div id="relicsRoot" style="margin-bottom:15px;"></div>
+
+            <div class="chat-room-container">
+                <div class="chat-header">
+                    <span>🌐 실시간 커뮤니티 대화방 (아이디 클릭시 귓속말)</span>
+                    <span id="chatModeLabel" style="color: #ffaa00; font-size: 11px;">[전체 채팅]</span>
+                </div>
+                <div class="chat-messages" id="chatMsgArea"></div>
+                <div class="chat-input-row">
+                    <input type="text" id="chatInput" placeholder="메시지를 입력하세요... (귓속말: @아이디 내용)" onkeydown="if(event.key==='Enter') sendChatMessage()">
+                    <button class="chat-send-btn" onclick="sendChatMessage()">전송</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="rightPanel">
+            <div class="store-header-title">Store</div>
+            
+            <div class="spec-upgrade-row">
+                <div class="spec-mini-card" id="cardCookieUpgrade" onclick="buySpecial('cookie')" title="🔥 황금 시현 쿠키 수련">🔥</div>
+                <div class="spec-mini-card" id="cardScrollUpgrade" onclick="buySpecial('scroll')" title="💫 고대 강화 주문서 비급">💫</div>
+            </div>
+
+            <div class="store-control-bar">
+                <div class="store-main-tabs">
+                    <button class="store-tab-btn active mode-buy" id="storeTabBuy" onclick="setStoreMode('BUY')">BUY (구매)</button>
+                    <button class="store-tab-btn mode-sell" id="storeTabSell" onclick="setStoreMode('SELL')">SELL (판매)</button>
+                </div>
+                <div class="store-amount-tabs">
+                    <button class="amount-tab-btn active" id="amtTab1" onclick="setStoreAmount(1)">x1</button>
+                    <button class="amount-tab-btn" id="amtTab10" onclick="setStoreAmount(10)">x10</button>
+                    <button class="amount-tab-btn" id="amtTab100" onclick="setStoreAmount(100)">x100</button>
+                </div>
+            </div>
+
+            <div class="scroll-container" id="shopItemsRoot"></div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="adminModal">
+        <div class="modal-box">
+            <div class="modal-header">
+                <div class="modal-title">⚙️ ADMINISTRATOR HYPER CONTROL CONSOLE</div>
+            </div>
+            <div class="modal-box-scroll" style="flex: 1; overflow-y: auto;">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>🎯 제어 대상 회원 선택 (실시간 데이터베이스 동기화)</label>
+                        <select id="admTargetSelect">
+                            <option value="">-- 유저를 로딩 중이거나 없습니다 --</option>
+                        </select>
+                    </div>
+
+                    <div class="admin-section-title" style="color: #ef4444; border-color: #ef4444;">⚔️ 월드 보스 레이드 원격 제어 센터</div>
+                    <div class="admin-action-row">
+                        <button class="admin-action-btn" style="background-color: #dc2626;" onclick="executeAdminControlRaid('START')">⚔️ 레이드 강제 시작</button>
+                        <button class="admin-action-btn" style="background-color: #4b5563;" onclick="executeAdminControlRaid('STOP')">🛑 레이드 즉시 중지</button>
+                    </div>
+                    
+                    <div class="admin-section-title">📊 라이브 스탯 인젝션 제어 (증가 / 감소)</div>
+                    <div class="form-group">
+                        <label>변동할 수치 (쿠키 점수 / SPS / 환생 일괄 적용 수치)</label>
+                        <input type="number" id="admAmountInput" placeholder="수치를 입력하세요 (예: 5000)">
+                    </div>
+
+                    <div class="admin-action-row">
+                        <button class="admin-action-btn btn-plus" onclick="adjustUserStat('score', 'plus')">점수 (+)</button>
+                        <button class="admin-action-btn btn-minus" onclick="adjustUserStat('score', 'minus')">점수 (-)</button>
+                        <button class="admin-action-btn btn-plus" onclick="adjustUserStat('sps', 'plus')">SPS (+)</button>
+                        <button class="admin-action-btn btn-minus" onclick="adjustUserStat('sps', 'minus')">SPS (-)</button>
+                    </div>
+
+                    <div class="admin-section-title">🎁 원격 아이템 수량 조절 제어 (실시간 인젝션)</div>
+                    <div class="form-group">
+                        <label>지급/차수 처리할 아이템 종류 선택</label>
+                        <select id="admItemSelect">
+                            <option value="item1">👆 Cursor</option>
+                            <option value="item2">👵 Grandma</option>
+                            <option value="item3">🌱 Farm</option>
+                            <option value="item4">⛏️ Mine</option>
+                            <option value="item5">🏭 Factory</option>
+                            <option value="item6">🏛️ Temple</option>
+                            <option value="item7">👹 괴물시현</option>
+                            <option value="item8">👑 보스시현</option>
+                            <option value="item9">🌌 불가능</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>조정할 아이템 개수</label>
+                        <input type="number" id="admItemCountInput" placeholder="개수를 입력하세요 (예: 10)">
+                    </div>
+                    <div class="admin-action-row">
+                        <button class="admin-action-btn btn-plus" onclick="adjustUserItem('plus')">아이템 (+)</button>
+                        <button class="admin-action-btn btn-minus" onclick="adjustUserItem('minus')">아이템 (-)</button>
+                    </div>
+
+                    <div class="admin-section-title">🔐 원격 유저 비밀번호 강제 변경 제어 (기존 비번 열람 불가)</div>
+                    <div class="form-group">
+                        <label>선택한 유저의 새로운 비밀번호 강제 주입</label>
+                        <input type="password" id="admTargetNewPwInput" placeholder="강제로 설정할 새 비밀번호 입력">
+                    </div>
+                    <div class="admin-action-row">
+                        <button class="admin-action-btn btn-ban" style="background-color: #eab308; color: black;" onclick="executeAdminUserPasswordOverride()">⚠️ 선택한 유저 비밀번호 강제 덮어쓰기</button>
+                    </div>
+
+                    <div class="admin-section-title" style="color: #00ffcc; border-color: #00ffcc;">📬 실시간 유저 접수 메시지 라이브 피드 (관리자 모드 전용)</div>
+                    <div class="admin-ticket-feed" id="admTicketFeedArea">
+                        <div style="color: #62738d; font-size: 11px; text-align: center; padding: 10px;">접수된 원격 문의 피드가 없거나 로딩 중입니다...</div>
+                    </div>
+
+                    <div class="admin-section-title">🛑 원격 시스템 제재 및 권한 차단 제어</div>
+                    <div class="form-group">
+                        <label>⏱️ 기간제 밴 시간 설정 (초 단위)</label>
+                        <input type="number" id="admBanSecondsInput" placeholder="정지시킬 시간 입력 (예: 60)">
+                    </div>
+                    
+                    <div class="admin-action-row">
+                        <button class="admin-action-btn btn-ban" onclick="executeAdminTimeBan()">⏳ 기간제 타임 밴</button>
+                        <button class="admin-action-btn btn-minus" onclick="executeAdminPermBan()">🔴 계정 영구 밴</button>
+                        <button class="admin-action-btn btn-unban" onclick="executeAdminUnban()">🔓 모든 밴 해제</button>
+                    </div>
+                    
+                    <div class="admin-action-row">
+                        <button class="admin-action-btn btn-purple" onclick="executeToggleChatBan(true)">🚫 월드 채팅 차단</button>
+                        <button class="admin-action-btn btn-unban" onclick="executeToggleChatBan(false)">✅ 월드 채팅 허용</button>
+                    </div>
+                    <div class="admin-action-row">
+                        <button class="admin-action-btn btn-purple" onclick="executeToggleDMBan(true)">🔒 1:1 귓속말 차단</button>
+                        <button class="admin-action-btn btn-unban" onclick="executeToggleDMBan(false)">🔓 1:1 귓속말 허용</button>
+                    </div>
+
+                    <button class="admin-btn-danger" onclick="executeDeleteUserAccount()">❌ 선택한 유저 계정 DB에서 영구 삭제</button>
+                </div>
+            </div>
+
+            <div class="admin-footer-controls">
+                <button class="footer-exit-btn exit-keep" onclick="exitAdminConsole(true)">관리자모드 켜고 나가기</button>
+                <button class="footer-exit-btn exit-turnoff" onclick="exitAdminConsole(false)">관리자모드 끄고 나가기</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, updatePassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, updateDoc, collection, getDocs, deleteDoc, query, orderBy, limit, addDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDNm7DK9T3TGx2FR2OdQLfzwuJBjt16GYU",
+            authDomain: "sihyunclicker.firebaseapp.com",
+            projectId: "sihyunclicker",
+            storageBucket: "sihyunclicker.firebasestorage.app",
+            messagingSenderId: "676913186221",
+            appId: "1:676913186221:web:3049c9a569ee1cf49a4d24"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        let score = 0;
+        let totalClicks = 0;
+        let prestigeCount = 0;
+        let cheatBonusSps = 0;
+        let ownedCookieUpgrade = false;
+        let ownedScrollUpgrade = false;
+
+        let currentUserSession = null;
+        let currentUserId = "";
+        let isAdminAuthenticated = false;
+
+        let currentStoreMode = "BUY"; 
+        let currentStoreAmount = 1;   
+
+        // ⚡ 황금 쿠키 실시간 연동 타이머 변수
+        let goldenCookieBuffTimer = 0;
+
+        // ⚔️ 실시간 레이드 상태 변수
+        let globalRaidActive = false;
+        let globalRaidHp = 100000000000000;
+        const MAX_BOSS_HP = 100000000000000;
+
+        const items = {
+            item1: { name: "Cursor", cost: 15, count: 0, spsValue: 0.1, baseCost: 15, icon: "👆" },
+            item2: { name: "Grandma", cost: 100, count: 0, spsValue: 1, baseCost: 100, icon: "👵" },
+            item3: { name: "Farm", cost: 1100, count: 0, spsValue: 8, baseCost: 1100, icon: "🌱" },
+            item4: { name: "Mine", cost: 12000, count: 0, spsValue: 47, baseCost: 12000, icon: "⛏️" },
+            item5: { name: "Factory", cost: 130000, count: 0, spsValue: 260, baseCost: 130000, icon: "🏭" },
+            item6: { name: "Temple", cost: 1000000, count: 0, spsValue: 1500, baseCost: 1000000, icon: "🏛️" },
+            item7: { name: "괴물시현", cost: 100000000, count: 0, spsValue: 150000, baseCost: 100000000, icon: "👹" },
+            item8: { name: "보스시현", cost: 1000000000, count: 0, spsValue: 2000000, baseCost: 1000000000, icon: "👑" },
+            item9: { name: "불가능", cost: 1000000000000, count: 0, spsValue: 50000000, baseCost: 1000000000000, icon: "🌌" }
+        };
+
+        const relicsList = [
+            { name: "별무리 조각 고대 유물", val: 500 },
+            { name: "심해의 진주 고대 유물", val: 1500 },
+            { name: "시간의 나침반 고대 유물", val: 5000 }
+        ];
+        let relicsOwned = [false, false, false];
+        const relicBonusValues = [500, 1500, 5000];
+
+        let badgesUnlocked = { welcome: true, click100: false, cookieMaster: false, scrollMaster: false };
+
+        window.switchAuthTab = function(tab) {
+            document.querySelectorAll('.auth-tab').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.auth-form').forEach(f => f.classList.remove('active'));
+            if(tab === 'login') {
+                document.querySelectorAll('.auth-tab')[0].classList.add('active');
+                document.getElementById('loginForm').classList.add('active');
+            } else {
+                document.querySelectorAll('.auth-tab')[1].classList.add('active');
+                document.getElementById('registerForm').classList.add('active');
+            }
+        };
+
+        window.toggleSettingArea = function() {
+            const panel = document.getElementById('toggleSubPanel');
+            panel.style.display = (panel.style.display === 'block') ? 'none' : 'block';
+        };
+
+        window.setStoreMode = function(mode) {
+            currentStoreMode = mode;
+            document.getElementById('storeTabBuy').classList.remove('active');
+            document.getElementById('storeTabSell').classList.remove('active');
+            if(mode === "BUY") document.getElementById('storeTabBuy').classList.add('active');
+            else document.getElementById('storeTabSell').classList.add('active');
+            buildShopUI();
+        };
+
+        window.setStoreAmount = function(amt) {
+            currentStoreAmount = amt;
+            document.getElementById('amtTab1').classList.remove('active');
+            document.getElementById('amtTab10').classList.remove('active');
+            document.getElementById('amtTab100').classList.remove('active');
+            document.getElementById('amtTab' + amt).classList.add('active');
+            buildShopUI();
+        };
+
+        window.triggerResetGame = async function() {
+            if (!currentUserId) return;
+            if (confirm("🚨 경고: 정말로 모든 게임 진행 데이터(점수, 아이템, 유물, 환생)를 초기화하시겠습니까?")) {
+                score = 0; totalClicks = 0; prestigeCount = 0; cheatBonusSps = 0;
+                ownedCookieUpgrade = false; ownedScrollUpgrade = false;
+                relicsOwned = [false, false, false];
+                badgesUnlocked = { welcome: true, click100: false, cookieMaster: false, scrollMaster: false };
+
+                for (const k in items) { items[k].count = 0; items[k].cost = items[k].baseCost; }
+                await saveGameToServer();
+                alert("🔄 초기화가 성공적으로 집행되었습니다.");
+                buildShopUI(); buildRelicsUI(); updateDisplay(); refreshBadgesUI();
+            }
+        };
+
+        window.handleRegister = async function() {
+            const id = document.getElementById('regId').value.trim();
+            const pw = document.getElementById('regPw').value.trim();
+            if(!id || !pw) { alert("계정 ID와 패스워드를 누락 없이 기입하세요."); return; }
+            if (pw.length < 6) {
+                alert("FireBase보안정책에 따라 비밀번호는 반드시 6자리 이상이어야 합니다.");
+                return;
+            }
+            const fakeEmail = `${id}@clicker.com`;
+            try {
+                const userDoc = await getDoc(doc(db, "users", id));
+                if(userDoc.exists()) { alert("중복된 아이디가 존재합니다."); return; }
+                await createUserWithEmailAndPassword(auth, fakeEmail, pw);
+                
+                const initData = {
+                    userId: id, password: pw, isPermanentBan: false, banExpiry: 0,
+                    isChatBanned: false, isDMBanned: false, 
+                    gameSave: {
+                        score: 0, totalClicks: 0, prestigeCount: 0, cheatBonusSps: 0,
+                        ownedCookieUpgrade: false, ownedScrollUpgrade: false,
+                        relicsOwned: [false, false, false],
+                        badgesUnlocked: { welcome: true, click100: false, cookieMaster: false, scrollMaster: false },
+                        itemCounts: { item1: 0, item2: 0, item3: 0, item4: 0, item5: 0, height: 0, item6: 0, item7: 0, item8: 0, item9: 0 }
+                    }
+                };
+                await setDoc(doc(db, "users", id), initData);
+                alert("회원가입 완료!");
+                location.reload();
+            } catch(e) { alert("가입 실패: " + e.message); }
+        };
+
+        window.handleLogin = async function() {
+            const id = document.getElementById('loginId').value.trim();
+            const pw = document.getElementById('loginPw').value.trim();
+            if(!id || !pw) { alert("자격 증명을 입력하세요."); return; }
+            try {
+                const userDoc = await getDoc(doc(db, "users", id));
+                if(userDoc.exists()) {
+                    const ud = userDoc.data();
+                    if(ud.isPermanentBan) { alert("🔴 영구 정지 처리를 받은 계정입니다."); return; }
+                    if(ud.banExpiry && ud.banExpiry > Date.now()) {
+                        const leftSec = Math.ceil((ud.banExpiry - Date.now()) / 1000);
+                        alert(`🟡 아직 기간제 밴 상태입니다. 남은 시간: ${leftSec}초`);
+                        return;
+                    }
+                } else { alert("매칭되는 정보가 없습니다."); return; }
+                await signInWithEmailAndPassword(auth, `${id}@clicker.com`, pw);
+            } catch(e) { alert("로그인 거부: 비밀번호 오류"); }
+        };
+
+        window.handleLogout = async function() {
+            await saveGameToServer();
+            await signOut(auth);
+            location.reload();
+        };
+
+        window.executeUserPasswordChange = async function() {
+            const newPw = document.getElementById('userNewPwInput').value.trim();
+            if(!newPw) { alert("변경할 새 비밀번호를 입력해주세요."); return; }
+            if(newPw.length < 6) { alert("FireBase보안정책에 따라 비밀번호는 반드시 6자리 이상이어야 합니다."); return; }
+
+            if(confirm("정말로 비밀번호를 변경하시겠습니까? (변경 후 재로그인 필요)")) {
+                try {
+                    if(!auth.currentUser) return;
+                    await updatePassword(auth.currentUser, newPw);
+                    await updateDoc(doc(db, "users", currentUserId), { password: newPw });
+                    
+                    alert("🔒 비밀번호가 성공적으로 변경되었습니다! 안전을 위해 다시 로그인해주세요.");
+                    await signOut(auth);
+                    location.reload();
+                } catch(e) {
+                    alert("비밀번호 변경 실패: " + e.message);
+                }
+            }
+        };
+
+        window.sendTicketToAdmin = async function() {
+            const msgText = document.getElementById('userToAdminMsgInput').value.trim();
+            if(!currentUserId) return;
+            if(!msgText) { alert("관리자에게 보낼 문의 내용을 입력해주세요."); return; }
+
+            try {
+                await addDoc(collection(db, "admin_tickets"), {
+                    senderId: currentUserId,
+                    message: msgText,
+                    timestamp: Date.now()
+                });
+                alert("📬 관리자 전용 실시간 데이터 레이어실로 메시지가 안전하게 전송되었습니다!");
+                document.getElementById('userToAdminMsgInput').value = '';
+            } catch(e) {
+                alert("전송 실패: " + e.message);
+            }
+        };
+
+        window.saveGameToServer = async function() {
+            if(!currentUserId) return;
+            try {
+                const itemCountsObj = {};
+                for(const k in items) { itemCountsObj[k] = items[k].count; }
+                await updateDoc(doc(db, "users", currentUserId), {
+                    "gameSave.score": score,
+                    "gameSave.totalClicks": totalClicks,
+                    "gameSave.prestigeCount": prestigeCount,
+                    "gameSave.cheatBonusSps": cheatBonusSps,
+                    "gameSave.ownedCookieUpgrade": ownedCookieUpgrade,
+                    "gameSave.ownedScrollUpgrade": ownedScrollUpgrade,
+                    "gameSave.relicsOwned": relicsOwned,
+                    "gameSave.badgesUnlocked": badgesUnlocked,
+                    "gameSave.itemCounts": itemCountsObj
+                });
+            } catch(e) { console.error("백업 에러:", e); }
+        };
+
+        // 전역 범위에서 관리자 명패 변수 선언
+        let isUserAdminPrivilege = false;
+
+        onAuthStateChanged(auth, async (user) => {
+            if(user) {
+                currentUserSession = user;
+                currentUserId = user.email.split('@')[0];
+                const userDoc = await getDoc(doc(db, "users", currentUserId));
+                if(userDoc.exists()) {
+                    const d = userDoc.data();
+                    if(d.isPermanentBan || (d.banExpiry && d.banExpiry > Date.now())) { 
+                        await signOut(auth); 
+                        location.reload(); 
+                        return; 
+                    }
+                    
+                    // ⚙️ 로그인 한 유저 문서에 isAdmin: true 필드가 있는지 체크해서 동기화
+                    isUserAdminPrivilege = d.isAdmin || false;
+
+                    const s = d.gameSave;
+                    score = s.score || 0; totalClicks = s.totalClicks || 0; prestigeCount = s.prestigeCount || 0;
+                    cheatBonusSps = s.cheatBonusSps || 0; ownedCookieUpgrade = s.ownedCookieUpgrade || false; ownedScrollUpgrade = s.ownedScrollUpgrade || false;
+                    if(s.relicsOwned) relicsOwned = s.relicsOwned;
+                    if(s.badgesUnlocked) badgesUnlocked = s.badgesUnlocked;
+                    if(s.itemCounts) {
+                        for(const k in items) {
+                            if(s.itemCounts[k] !== undefined) {
+                                items[k].count = s.itemCounts[k];
+                                items[k].cost = Math.floor(items[k].baseCost * Math.pow(1.15, items[k].count));
+                            }
+                        }
+                    }
+                    document.getElementById('navUserId').innerText = currentUserId;
+                    document.getElementById('authOverlay').style.display = 'none';
+                    buildShopUI(); buildRelicsUI(); updateDisplay(); refreshBadgesUI(); loadChatMessages();
+                    listenToGlobalRaidState(); // ⚔️ 실시간 레이드 감지 바인딩 시작
+                    startGoldenCookieEngine(); // ⚡ 돌발 황금 쿠키 사이클 작동
+                    setInterval(saveGameToServer, 15000);
+                }
+            } else {
+                document.getElementById('authOverlay').style.display = 'flex';
+            }
+        });
+
+        function refreshBadgesUI() {
+            for(const bk in badgesUnlocked) {
+                const el = document.getElementById('mini_badge_' + bk);
+                if(el && badgesUnlocked[bk]) el.classList.add('unlocked');
+            }
+        }
+
+        // ⚡ [신규] 황금 쿠키 돌발 이벤트 스폰 엔진 코어
+        function startGoldenCookieEngine() {
+            setInterval(() => {
+                if(!currentUserSession) return;
+                // 이미 화면에 황금 쿠키가 존재하지 않을 때만 확률적으로 렌더링 (35% 확률)
+                if(document.getElementById('goldenCookieEntityNode')) return;
+                if(Math.random() > 0.35) return;
+
+                const leftPanel = document.getElementById('leftPanel');
+                const gc = document.createElement('div');
+                gc.id = 'goldenCookieEntityNode';
+                gc.className = 'golden-cookie-entity';
+                gc.innerText = '⭐';
+
+                // 렌더링 좌표 랜덤 산출
+                const randomX = Math.floor(Math.random() * (leftPanel.offsetWidth - 80)) + 10;
+                const randomY = Math.floor(Math.random() * (leftPanel.offsetHeight - 180)) + 100;
+                gc.style.left = randomX + 'px';
+                gc.style.top = randomY + 'px';
+
+                gc.onclick = function(event) {
+                    event.stopPropagation();
+                    goldenCookieBuffTimer = 7; // 7초 버프 주입
+                    alert("⚡ [황금 쿠키 축복] 7초 동안 모든 클릭 대미지 및 생산 효율이 77배로 증가합니다!");
+                    gc.remove();
+                };
+
+                leftPanel.appendChild(gc);
+                // 5초 이내에 클릭하지 못하면 소멸
+                setTimeout(() => { if(gc.parentNode) gc.remove(); }, 5000);
+            }, 30000); // 30초마다 돌발 스캔 루프
+        }
+
+        function getCurrentSps() {
+            let sps = 0;
+            for (const key in items) { sps += items[key].count * items[key].spsValue; }
+            relicsOwned.forEach((o, i) => { if(o) sps += relicBonusValues[i]; });
+            if(ownedScrollUpgrade) sps += relicsOwned.filter(Boolean).length * 2500;
+            sps += prestigeCount * 10000 + cheatBonusSps;
+            return sps;
+        }
+
+        window.handleCookieClick = async function(e) {
+            if (!currentUserSession) return;
+            
+            // ⚡ 황금 쿠키 버프 시 클릭 수치 77배 연산 적용
+            let isGoldenActive = goldenCookieBuffTimer > 0;
+            let baseGain = ownedCookieUpgrade ? 5 : 1;
+            let gain = isGoldenActive ? (baseGain * 77) : baseGain;
+
+            score += gain; totalClicks++;
+            
+            const container = document.getElementById('cookieContainer');
+            const ft = document.createElement('div');
+            ft.className = 'floating-text'; 
+            ft.innerText = `+${gain}`;
+            if(isGoldenActive) { ft.style.color = '#eab308'; ft.style.fontSize = '30px'; }
+            ft.style.left = (e.clientX - container.getBoundingClientRect().left - 10) + 'px';
+            ft.style.top = (e.clientY - container.getBoundingClientRect().top - 20) + 'px';
+            container.appendChild(ft);
+            setTimeout(() => ft.remove(), 800);
+
+            if(totalClicks >= 100 && !badgesUnlocked.click100) {
+                badgesUnlocked.click100 = true; alert("🏆 누적 클릭 100회 달성!"); refreshBadgesUI();
+            }
+
+            // ⚔️ 레이드가 실시간 작동 중인 경우 클릭 효율 데미지로 변환 인젝션
+            if (globalRaidActive && globalRaidHp > 0) {
+                let dmgAmt = gain * 500000; // 가중 대미지 스케일링 적용
+                try {
+                    let nextHp = globalRaidHp - dmgAmt;
+                    if(nextHp <= 0) {
+                        await triggerRaidVictoryReward();
+                    } else {
+                        await updateDoc(doc(db, "world_raid", "current_boss"), { currentHp: nextHp });
+                    }
+                } catch(err) { console.error("대미지 주입 에러:", err); }
+            }
+
+            updateDisplay();
+        };
+
+        // ⚔️ 전 서버 공동 보스 처치 성공 시 일괄 보상 및 종료 처리 기믹
+        async function triggerRaidVictoryReward() {
+            try {
+                await setDoc(doc(db, "world_raid", "current_boss"), {
+                    active: false,
+                    currentHp: 0
+                });
+                // 내 런타임에 초대형 기여 보상을 즉시 다이렉트 처리
+                score += 5000000000; // 50억 시현 일괄 인젝션
+                prestigeCount += 3;  // 환생 수치 프리미엄 3회 증정
+                alert("🎉 [WORLD RAID VICTORY] 전 서버 유저들이 진·보스시현을 완전히 처치했습니다! 특수 기여 보상으로 50억 시현 및 환생 +3회를 영구 획득했습니다!");
+                updateDisplay();
+            } catch(e) { console.error(e); }
+        }
+
+        // ⚔️ [신규] Firestore 글로벌 실시간 레이드 보스 데이터 바인딩 스트리머
+        function listenToGlobalRaidState() {
+            onSnapshot(doc(db, "world_raid", "current_boss"), (snapshot) => {
+                const uiPanel = document.getElementById('raidBossUIPanel');
+                if (snapshot.exists()) {
+                    const data = snapshot.data();
+                    globalRaidActive = data.active || false;
+                    globalRaidHp = data.currentHp !== undefined ? data.currentHp : MAX_BOSS_HP;
+
+                    if (globalRaidActive && globalRaidHp > 0) {
+                        uiPanel.style.display = 'block';
+                        const hpPercent = (globalRaidHp / MAX_BOSS_HP) * 100;
+                        document.getElementById('bossHpBarFill').style.width = `${hpPercent}%`;
+                        document.getElementById('bossHpBarText').innerText = `${Math.floor(globalRaidHp).toLocaleString()} / ${MAX_BOSS_HP.toLocaleString()} HP`;
+                    } else {
+                        uiPanel.style.display = 'none';
+                    }
+                } else {
+                    uiPanel.style.display = 'none';
+                }
+            });
+        }
+
+        // ⚔️ [관리자 권한 센터] 보스 레이드 실시간 원격 시작 및 중지 장치 제어기
+        window.executeAdminControlRaid = async function(actionType) {
+            if (!isAdminAuthenticated) return;
+            try {
+                if (actionType === 'START') {
+                    await setDoc(doc(db, "world_raid", "current_boss"), {
+                        active: true,
+                        currentHp: MAX_BOSS_HP,
+                        startedAt: Date.now()
+                    });
+                    alert("⚔️ [원격 인프라 통제] 전 서버 월드 보스 레이드를 정식 개막시켰습니다!");
+                } else {
+                    await setDoc(doc(db, "world_raid", "current_boss"), {
+                        active: false,
+                        currentHp: 0
+                    });
+                    alert("🛑 [원격 인프라 통제] 진행 중이던 월드 보스 레이드를 실시간으로 전면 중지 및 폐쇄시켰습니다.");
+                }
+            } catch(e) {
+                alert("레이드 제어 통신 오류: " + e.message);
+            }
+        };
+
+        function buildShopUI() {
+            const root = document.getElementById('shopItemsRoot'); root.innerHTML = '';
+            for(const key in items) {
+                const it = items[key];
+                let displayPrice = 0;
+
+                if (currentStoreMode === "BUY") {
+                    if (isAdminAuthenticated) {
+                        displayPrice = 0;
+                    } else {
+                        let tempCount = it.count;
+                        for (let i = 0; i < currentStoreAmount; i++) {
+                            displayPrice += Math.floor(it.baseCost * Math.pow(1.15, tempCount));
+                            tempCount++;
+                        }
+                    }
+                } else {
+                    let tempCount = it.count;
+                    for (let i = 0; i < currentStoreAmount; i++) {
+                        if (tempCount > 0) {
+                            displayPrice += Math.floor(Math.floor(it.baseCost * Math.pow(1.15, tempCount - 1)) * 0.5);
+                            tempCount--;
+                        }
+                    }
+                }
+
+                const div = document.createElement('div');
+                div.className = 'shop-item'; div.id = `shop_${key}`;
+                div.setAttribute('onclick', `handleShopItemTrade('${key}', ${displayPrice})`);
+                
+                const labelColor = (currentStoreMode === "BUY") ? "#10b981" : "#ef4444";
+                const prefixText = (currentStoreMode === "BUY") ? "구매 비용:" : "판매 수익:";
+
+                div.innerHTML = `
+                    <div class="item-icon-placeholder">${it.icon}</div>
+                    <div class="item-info">
+                        <div class="item-name">${it.name} <span style="font-size:10px; color:${labelColor}; font-weight:normal;">(${currentStoreMode} x${currentStoreAmount})</span></div>
+                        <div class="item-cost" id="cost_${key}" style="color:${labelColor};">${prefixText} ${displayPrice.toLocaleString()}</div>
+                    </div>
+                    <div class="item-count" id="count_${key}">${it.count}</div>
+                `;
+                root.appendChild(div);
+            }
+            updateDisplay();
+        }
+
+        window.handleShopItemTrade = function(key, calculatedPrice) {
+            const it = items[key];
+
+            if (currentStoreMode === "BUY") {
+                if (isAdminAuthenticated || score >= calculatedPrice) {
+                    if (!isAdminAuthenticated) {
+                        score -= calculatedPrice;
+                    }
+                    it.count += currentStoreAmount;
+                    it.cost = Math.floor(it.baseCost * Math.pow(1.15, it.count));
+                    buildShopUI();
+                } else {
+                    alert("자원이 부족하여 일괄 구매를 집행할 수 없습니다.");
+                }
+            } else {
+                if (it.count >= currentStoreAmount) {
+                    score += calculatedPrice;
+                    it.count -= currentStoreAmount;
+                    it.cost = Math.floor(it.baseCost * Math.pow(1.15, it.count));
+                    buildShopUI();
+                } else {
+                    alert("보유하고 있는 아이템 개수가 부족하여 판매할 수 없습니다.");
+                }
+            }
+        };
+
+        function buildRelicsUI() {
+            const root = document.getElementById('relicsRoot'); root.innerHTML = '';
+            relicsList.forEach((r, idx) => {
+                const div = document.createElement('div');
+                div.className = `relic-item-row ${relicsOwned[idx] ? 'owned' : ''}`;
+                div.innerHTML = `<span>🔮 ${r.name} (+${r.val.toLocaleString()} SPS)</span><strong>${relicsOwned[idx] ? '활성화' : '미획득'}</strong>`;
+                root.appendChild(div);
+            });
+        }
+
+        window.buySpecial = function(type) {
+            if(type === 'cookie' && !ownedCookieUpgrade && (isAdminAuthenticated || score >= 5000)) {
+                if (!isAdminAuthenticated) score -= 5000; 
+                ownedCookieUpgrade = true; alert("수련 완료! 클릭 효율 5배 증가"); updateDisplay();
+            } else if(type === 'scroll' && !ownedScrollUpgrade && (isAdminAuthenticated || score >= 30000)) {
+                if (!isAdminAuthenticated) score -= 30000; 
+                ownedScrollUpgrade = true; alert("비급 터득 완료!"); updateDisplay();
+            } else { alert("조건이 맞지 않거나 자원이 부족합니다."); }
+        };
+
+        window.triggerPrestige = function() {
+            const currentRequiredCost = (prestigeCount + 1) * 10000000; 
+            
+            if(isAdminAuthenticated || score >= currentRequiredCost) {
+                const msg = isAdminAuthenticated 
+                    ? `[관리자 특권] 비용 없이 무료로 ${prestigeCount + 1}번째 초월 환생을 진행하시겠습니까?` 
+                    : `모든 일반 아이템을 반환하고 소지금 점수를 초기화하여 ${prestigeCount + 1}번째 초월 환생을 진행하시겠습니까?`;
+                
+                if(confirm(msg)) {
+                    score = 0; 
+                    prestigeCount++;
+                    
+                    for(const k in items) { items[k].count = 0; items[k].cost = items[k].baseCost; }
+                    const rolledIdx = Math.floor(Math.random() * relicsOwned.length);
+                    relicsOwned[rolledIdx] = true;
+                    
+                    buildShopUI(); buildRelicsUI(); updateDisplay(); saveGameToServer();
+                }
+            } else { 
+                alert(`시현 점수가 부족합니다. (다음 환생 비용: ${currentRequiredCost.toLocaleString()} 시현 필요)`); 
+            }
+        };
+
+        function updateDisplay() {
+            const nextCost = (prestigeCount + 1) * 10000000;
+            
+            if (isAdminAuthenticated) {
+                document.getElementById('prestigeBtn').innerText = `✨ 관리자 무료 환생 가능 (SPS +10,000)`;
+                document.getElementById('adminCheatBadge').style.display = 'inline-block';
+            } else {
+                document.getElementById('prestigeBtn').innerText = `다음 환생 비용: ${nextCost.toLocaleString()} 시현`;
+                document.getElementById('adminCheatBadge').style.display = 'none';
+            }
+
+            document.getElementById('scoreDisplay').innerText = `${Math.floor(score).toLocaleString()} 시현`;
+            document.getElementById('centerClicksVal').innerText = totalClicks.toLocaleString();
+            document.getElementById('centerPrestigeVal').innerText = prestigeCount.toLocaleString();
+
+            let sps = getCurrentSps();
+            document.getElementById('centerSpsVal').innerText = sps.toFixed(1).toLocaleString();
+            
+            if(ownedCookieUpgrade) document.getElementById('cardCookieUpgrade').classList.add('owned');
+            if(ownedScrollUpgrade) document.getElementById('cardScrollUpgrade').classList.add('owned');
+        }
+
+        // 게임 메인 가동 런타임 클락 루프 (0.1초 연산 간격)
+        setInterval(async () => {
+            if (!currentUserSession) return;
+            
+            // ⚡ 황금 쿠키 축복 버프 타이머 실시간 감산
+            if(goldenCookieBuffTimer > 0) {
+                goldenCookieBuffTimer -= 0.1;
+                if(goldenCookieBuffTimer <= 0) {
+                    goldenCookieBuffTimer = 0;
+                    alert("⚡ 황금 쿠키의 가속 버프 유효 기간이 만료되어 정상 스탯으로 회귀합니다.");
+                }
+            }
+
+            let sps = getCurrentSps();
+            // ⚡ 황금 쿠키 축복 버프 발동 시 초당 생산 효율도 77배로 하이퍼 부스팅 적용
+            if(goldenCookieBuffTimer > 0) {
+                sps = sps * 77;
+            }
+
+            score += sps / 10;
+
+            // ⚔️ 레이드가 정상 켜져 있는 기간에는 0.1초마다 초당 생산량이 실시간 보스 자동 타격 데미지로 전사 투입됨
+            if (globalRaidActive && globalRaidHp > 0 && sps > 0) {
+                let autoDmg = (sps / 10) * 15000; // 초당 누적 틱 대미지 보정 상향
+                let targetHp = globalRaidHp - autoDmg;
+                if (targetHp <= 0) {
+                    await triggerRaidVictoryReward();
+                } else {
+                    globalRaidHp = targetHp; // 즉시 클라이언트 렌더링 동기화
+                }
+            }
+
+            updateDisplay();
+        }, 100);
+
+        setInterval(async () => {
+            if(!currentUserId) return;
+            const checkDoc = await getDoc(doc(db, "users", currentUserId));
+            if(checkDoc.exists()) {
+                const ud = checkDoc.data();
+                if(ud.isPermanentBan || (ud.banExpiry && ud.banExpiry > Date.now())) {
+                    alert("🔴 관리자 권한으로 실시간 계정이 정지 처리되어 게임 화면에서 추방됩니다.");
+                    await signOut(auth);
+                    location.reload();
+                }
+            }
+        }, 3000);
+
+        window.clickUserToDM = function(targetUser) {
+            if(targetUser === currentUserId) return;
+            const input = document.getElementById('chatInput');
+            input.value = `@${targetUser} ` + input.value.replace(/^@[A-Za-z0-9가-힣_]+\s/, "");
+            input.focus();
+        };
+
+        window.sendChatMessage = async function() {
+            const input = document.getElementById('chatInput');
+            let text = input.value.trim();
+            if(!text || !currentUserId) return;
+
+            try {
+                const myProfile = await getDoc(doc(db, "users", currentUserId));
+                if(!myProfile.exists()) return;
+                const myData = myProfile.data();
+                const dmMatch = text.match(/^@([A-Za-z0-9ㄱ-ㅎㅏ-ㅣ가-힣_]+)\s(.+)/);
+
+                if(dmMatch) {
+                    if(myData.isDMBanned) {
+                        alert("🔒 당신은 관리자에 의해 1:1 귓속말 기능이 전면 차단되었습니다.");
+                        return;
+                    }
+                    const targetReceiver = dmMatch[1];
+                    const dmText = dmMatch[2];
+
+                    const targetCheck = await getDoc(doc(db, "users", targetReceiver));
+                    if(!targetCheck.exists() && targetReceiver !== 'admin' && targetReceiver !== '시현') {
+                        alert("⚠️ 존재하지 않는 유저에게 귓속말을 보낼 수 없습니다.");
+                        return;
+                    }
+
+                    await addDoc(collection(db, "chat_messages"), {
+                        sender: currentUserId,
+                        receiver: targetReceiver, 
+                        text: dmText,
+                        isDM: true,
+                        timestamp: Date.now()
+                    });
+                    input.value = `@${targetReceiver} `; 
+                } else {
+                    if(myData.isChatBanned) {
+                        alert("🚫 당신은 관리자에 의해 월드 전체 채팅방 발언권이 정지되었습니다.");
+                        return;
+                    }
+                    await addDoc(collection(db, "chat_messages"), {
+                        sender: currentUserId,
+                        text: text,
+                        isDM: false,
+                        timestamp: Date.now()
+                    });
+                    input.value = '';
+                }
+            } catch(e) { console.error(e); }
+        };
+
+        function loadChatMessages() {
+            const q = query(collection(db, "chat_messages"), orderBy("timestamp", "desc"), limit(50));
+            onSnapshot(q, (snapshot) => {
+                const msgArea = document.getElementById('chatMsgArea');
+                msgArea.innerHTML = '';
+                const docs = [];
+                snapshot.forEach(d => docs.unshift(d.data()));
+                
+                docs.forEach(m => {
+                    if(m.isDM) {
+                        if(m.sender !== currentUserId && m.receiver !== currentUserId) {
+                            return; 
+                        }
+                    }
+
+                    const row = document.createElement('div');
+                    row.className = 'chat-msg-row';
+                    
+                    const isSystem = m.sender === 'admin' || m.sender === '시현';
+                    const userClass = isSystem ? 'chat-admin-user' : 'chat-user';
+                    
+                    let prefixMarkup = "";
+                    if(m.isDM) {
+                        if(m.sender === currentUserId) {
+                            prefixMarkup = `<span class="chat-dm-label">To @${m.receiver}</span>`;
+                        } else {
+                            prefixMarkup = `<span class="chat-dm-label">From @${m.sender}</span>`;
+                        }
+                    }
+
+                    const nameSpan = `<span class="${userClass}" onclick="clickUserToDM('${m.sender}')">${isSystem ? '[관리자] ' : ''}${m.sender}</span>`;
+                    row.innerHTML = `${prefixMarkup}${nameSpan} : ${m.text}`;
+                    msgArea.appendChild(row);
+                });
+                msgArea.scrollTop = msgArea.scrollHeight;
+            });
+        }
+
+        // 👑 [하이패스 인프라 적용] 암호 검증 및 관리자 모드 진입 장치
+        window.openAdminModal = function() {
+            // Firestore 데이터 조회 결과 명패(isUserAdminPrivilege)가 true라면 바로 통과!
+            if (isUserAdminPrivilege === true) {
+                isAdminAuthenticated = true;
+            } else {
+                if (!isAdminAuthenticated) {
+                    // 관리자 명패가 없다면 일반 유저용 패스워드 검증 작동
+                    const passwordInput = prompt("관리자 보안 원격 암호를 입력하세요:");
+                    if (passwordInput === "767800") {
+                        isAdminAuthenticated = true;
+                    } else {
+                        if (passwordInput !== null) alert("❌ 패스워드가 불일치하여 콘솔 진입이 무산되었습니다.");
+                        return;
+                    }
+                }
+            }
+            document.getElementById('adminModal').classList.add('active');
+            loadUserDropdown();
+            loadAdminTicketsFeed(); 
+        };
+
+        async function loadUserDropdown() {
+            const selectEl = document.getElementById('admTargetSelect');
+            selectEl.innerHTML = '<option value="">-- 제어할 계정 선택 --</option>';
+            try {
+                const snap = await getDocs(collection(db, "users"));
+                snap.forEach(doc => {
+                    const userData = doc.data();
+                    let tags = [];
+                    if(userData.isPermanentBan) tags.push("영구밴");
+                    if(userData.banExpiry && userData.banExpiry > Date.now()) tags.push("기간밴");
+                    if(userData.isChatBanned) tags.push("채팅차단");
+                    if(userData.isDMBanned) tags.push("귓속말차단");
+                    if(userData.isAdmin) tags.push("👑관리자");
+                    
+                    let statusLabel = tags.length > 0 ? tags.join(",") : "정상";
+
+                    const option = document.createElement('option');
+                    option.value = userData.userId;
+                    option.innerText = `ID: ${userData.userId} [${statusLabel}] (점수: ${Math.floor(userData.gameSave?.score || 0).toLocaleString()})`;
+                    selectEl.appendChild(option);
+                });
+            } catch(e) { selectEl.innerHTML = '<option value="">유저 목록 로드 실패</option>'; }
+        }
+
+        function loadAdminTicketsFeed() {
+            const q = query(collection(db, "admin_tickets"), orderBy("timestamp", "desc"), limit(30));
+            onSnapshot(q, (snapshot) => {
+                const feedArea = document.getElementById('admTicketFeedArea');
+                feedArea.innerHTML = '';
+                
+                if (snapshot.empty) {
+                    feedArea.innerHTML = '<div style="color: #62738d; font-size: 11px; text-align: center; padding: 10px;">접수된 건의 사항이 전무합니다.</div>';
+                    return;
+                }
+
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    const dateStr = new Date(data.timestamp).toLocaleString();
+                    const row = document.createElement('div');
+                    row.className = 'ticket-row';
+                    row.innerHTML = `
+                        <div class="ticket-meta">
+                            <span style="color: #00ffcc; font-weight: bold;">👤 발신유저: ${data.senderId}</span>
+                            <span>⏱️ ${dateStr}</span>
+                        </div>
+                        <div style="color: #ffffff; word-break: break-all;">${data.message}</div>
+                    `;
+                    feedArea.appendChild(row);
+                });
+            });
+        }
+
+        window.adjustUserStat = async function(statType, operation) {
+            if (!isAdminAuthenticated) { alert("관리자 승인이 거부되었습니다."); return; }
+            const targetId = document.getElementById('admTargetSelect').value;
+            const amount = parseFloat(document.getElementById('admAmountInput').value);
+            
+            if(!targetId) { alert("드롭다운 메뉴에서 대상을 선택하십시오."); return; }
+            if(isNaN(amount) || amount <= 0) { alert("올바른 조작 수치를 대입하십시오."); return; }
+
+            try {
+                const targetDocRef = doc(db, "users", targetId);
+                const targetSnap = await getDoc(targetDocRef);
+                if(!targetSnap.exists()) return;
+
+                const targetData = targetSnap.data();
+                const gameSaveData = targetData.gameSave || {};
+                
+                let currentScore = gameSaveData.score || 0;
+                let currentCheatSps = gameSaveData.cheatBonusSps || 0;
+                const multiplier = (operation === 'plus') ? 1 : -1;
+
+                if (statType === 'score') {
+                    currentScore += (amount * multiplier);
+                    if(currentScore < 0) currentScore = 0;
+                    await updateDoc(targetDocRef, { "gameSave.score": currentScore });
+                    alert(`[성공] 유저 [${targetId}]의 쿠키 점수가 조정되었습니다.`);
+                    if(targetId === currentUserId) score = currentScore;
+                } 
+                else if (statType === 'sps') {
+                    currentCheatSps += (amount * multiplier);
+                    if(currentCheatSps < 0) currentCheatSps = 0;
+                    await updateDoc(targetDocRef, { "gameSave.cheatBonusSps": currentCheatSps });
+                    alert(`[성공] 유저 [${targetId}]의 Cheat SPS 가산치가 재조정되었습니다.`);
+                    if(targetId === currentUserId) cheatBonusSps = currentCheatSps;
+                }
+                updateDisplay();
+                await loadUserDropdown();
+            } catch(err) { alert("통신 에러: " + err.message); }
+        };
+
+        window.adjustUserItem = async function(operation) {
+            if (!isAdminAuthenticated) { alert("관리자 승인이 거부되었습니다."); return; }
+            const targetId = document.getElementById('admTargetSelect').value;
+            const itemKey = document.getElementById('admItemSelect').value;
+            const countInput = parseInt(document.getElementById('admItemCountInput').value);
+
+            if(!targetId) { alert("제어 대상을 먼저 선택해주세요."); return; }
+            if(isNaN(countInput) || countInput <= 0) { alert("올바른 아이템 조정 수량을 기입하십시오."); return; }
+
+            try {
+                const targetDocRef = doc(db, "users", targetId);
+                const targetSnap = await getDoc(targetDocRef);
+                if(!targetSnap.exists()) return;
+
+                const targetData = targetSnap.data();
+                const gameSaveData = targetData.gameSave || {};
+                let currentItemCounts = gameSaveData.itemCounts || {};
+                
+                let currentCount = currentItemCounts[itemKey] || 0;
+                const multiplier = (operation === 'plus') ? 1 : -1;
+                
+                currentCount += (countInput * multiplier);
+                if(currentCount < 0) currentCount = 0;
+
+                await updateDoc(targetDocRef, {
+                    [`gameSave.itemCounts.${itemKey}`]: currentCount
+                });
+
+                alert(`[성공] 유저 [${targetId}]의 아이템 수량이 성공적으로 변경되었습니다.`);
+
+                if(targetId === currentUserId) {
+                    items[itemKey].count = currentCount;
+                    items[itemKey].cost = Math.floor(items[itemKey].baseCost * Math.pow(1.15, currentCount));
+                    buildShopUI();
+                }
+                await loadUserDropdown();
+            } catch(e) {
+                alert("아이템 인젝션 에러: " + e.message);
+            }
+        };
+
+        window.executeAdminUserPasswordOverride = async function() {
+            if (!isAdminAuthenticated) { alert("관리자 승인이 거부되었습니다."); return; }
+            const targetId = document.getElementById('admTargetSelect').value;
+            const targetNewPw = document.getElementById('admTargetNewPwInput').value.trim();
+
+            if(!targetId) { alert("비밀번호를 강제 변경할 대상을 드롭다운에서 선택하세요."); return; }
+            if(!targetNewPw) { alert("새롭게 주입할 패스워드를 입력창에 기입하세요."); return; }
+            if(targetNewPw.length < 6) { alert("FireBase보안정책에 따라 비밀번호는 반드시 6자리 이상이어야 합니다."); return; }
+
+            if(confirm(`🚨 경고: 관리자 권한으로 유저 [ ${targetId} ]의 비밀번호를 강제 변경(덮어쓰기)하시겠습니까?\n(웹상에서 원격 문서 데이터를 덮어씁니다.)`)) {
+                try {
+                    await updateDoc(doc(db, "users", targetId), { password: targetNewPw });
+                    alert(`✅ 유저 [ ${targetId} ]의 계정 비밀번호 강제 오버라이드가 성공적으로 완료되었습니다.`);
+                    document.getElementById('admTargetNewPwInput').value = ''; 
+                    await loadUserDropdown();
+                } catch(e) {
+                    alert("비밀번호 원격 변경 통신 실패: " + e.message);
+                }
+            }
+        };
+
+        window.executeAdminTimeBan = async function() {
+            if (!isAdminAuthenticated) { alert("관리자 승인이 거부되었습니다."); return; }
+            const targetId = document.getElementById('admTargetSelect').value;
+            const seconds = parseInt(document.getElementById('admBanSecondsInput').value);
+            if(!targetId) return alert("대상을 지정해 주십시오.");
+            if(isNaN(seconds) || seconds <= 0) return alert("정지 시간(초)을 입력해 주세요.");
+
+            try {
+                const expiryTimestamp = Date.now() + (seconds * 1000);
+                await updateDoc(doc(db, "users", targetId), { banExpiry: expiryTimestamp, isPermanentBan: false });
+                alert(`유저 [${targetId}]에게 ${seconds}초 동안 타임 밴을 설정했습니다.`);
+                await loadUserDropdown();
+            } catch(e) { alert("실행 실패: " + e.message); }
+        };
+
+        window.executeAdminPermBan = async function() {
+            if (!isAdminAuthenticated) { alert("관리자 승인이 거부되었습니다."); return; }
+            const targetId = document.getElementById('admTargetSelect').value;
+            if(!targetId) return alert("대상을 지정해 주십시오.");
+            if(confirm(`정말로 유저 [${targetId}]를 중앙 서버에서 영구 정지하시겠습니까?`)) {
+                await updateDoc(doc(db, "users", targetId), { isPermanentBan: true, banExpiry: 0 });
+                alert("영구 차단 반영.");
+                await loadUserDropdown();
+            }
+        };
+
+        window.executeAdminUnban = async function() {
+            if (!isAdminAuthenticated) { alert("관리자 승인이 거부되었습니다."); return; }
+            const targetId = document.getElementById('admTargetSelect').value;
+            if(!targetId) return alert("해제할 대상을 선택하십시오.");
+            try {
+                await updateDoc(doc(db, "users", targetId), { 
+                    isPermanentBan: false, banExpiry: 0, 
+                    isChatBanned: false, isDMBanned: false 
+                });
+                alert(`🔓 유저 [${targetId}]의 모든 차단 상태가 완벽하게 사면되었습니다!`);
+                await loadUserDropdown();
+            } catch(e) { alert("해제 실패: " + e.message); }
+        };
+
+        window.executeToggleChatBan = async function(shouldBan) {
+            if (!isAdminAuthenticated) { alert("관리자 승인이 거부되었습니다."); return; }
+            const targetId = document.getElementById('admTargetSelect').value;
+            if(!targetId) return alert("대상을 선택하십시오.");
+            try {
+                await updateDoc(doc(db, "users", targetId), { isChatBanned: shouldBan });
+                alert(`[채팅 제재] 유저 [${targetId}]의 월드 대화방 권한을 ${shouldBan ? "차단" : "허용"} 처리했습니다.`);
+                await loadUserDropdown();
+            } catch(e) { alert("에러: " + e.message); }
+        };
+
+        window.executeToggleDMBan = async function(shouldBan) {
+            if (!isAdminAuthenticated) { alert("관리자 승인이 거부되었습니다."); return; }
+            const targetId = document.getElementById('admTargetSelect').value;
+            if(!targetId) return alert("대상을 선택하십시오.");
+            try {
+                await updateDoc(doc(db, "users", targetId), { isDMBanned: shouldBan });
+                alert(`[귓속말 제재] 유저 [${targetId}]의 1:1 비밀 메시지 권한을 ${shouldBan ? "차단" : "허용"} 처리했습니다.`);
+                await loadUserDropdown();
+            } catch(e) { alert("에러: " + e.message); }
+        };
+
+        window.executeDeleteUserAccount = async function() {
+            if (!isAdminAuthenticated) { alert("관리자 승인이 거부되었습니다."); return; }
+            const targetId = document.getElementById('admTargetSelect').value;
+            if(!targetId) return alert("삭제할 계정을 지정하세요.");
+            if(confirm(`정말로 유저 [ ${targetId} ]의 회원 정보를 완전히 파괴하시겠습니까?`)) {
+                try {
+                    await deleteDoc(doc(db, "users", targetId));
+                    alert(`삭제되었습니다.`);
+                    if(targetId === currentUserId) { await signOut(auth); location.reload(); }
+                    else { await loadUserDropdown(); }
+                } catch(e) { alert("삭제 오류: " + e.message); }
+            }
+        };
+
+        window.exitAdminConsole = function(keepAuthAlive) {
+            isAdminAuthenticated = !!keepAuthAlive; 
+            document.getElementById('adminModal').classList.remove('active');
+            buildShopUI();
+            updateDisplay();
+        };
+
+        window.addEventListener("beforeunload", saveGameToServer);
+    </script>
+</body>
+</html>
