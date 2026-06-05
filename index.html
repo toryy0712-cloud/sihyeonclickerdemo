@@ -309,7 +309,7 @@
                 <button class="auth-btn" onclick="handleLogin()">게임 접속</button>
                 
                 <div class="auth-external-link-wrap">
-                    <button class="auth-external-toggle-btn" onclick="switchAuthTab('ticket')">개인 정보 보호 및 Gemini</button>
+                    <button class="auth-external-toggle-btn" onclick="switchAuthTab('ticket')">회원가입요청</button>
                 </div>
             </div>
 
@@ -318,10 +318,6 @@
                 <div class="auth-input-group">
                     <label>임시 닉네임 또는 식별자</label>
                     <input type="text" id="extTicketSender" autocomplete="off" placeholder="ex: 익명유저">
-                </div>
-                <div class="auth-input-group">
-                    <label>문의/건의 사항 내용 기입</label>
-                    <input type="text" id="extTicketMsg" placeholder="여기에 전달할 내용을 기입하세요.">
                 </div>
                 <button class="auth-btn" style="background-color: #10b981; color: white;" onclick="handleExternalTicketSend()">관리자실로 즉시 전송</button>
             </div>
