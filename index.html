@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sihyun Clicker v3.1V (Admin Bulk-Ban & Live Full-Ranking Edition)</title>
+    <title>Sihyun Clicker v3.2V (Admin Realtime Notice & ID Changer Edition)</title>
     
     <link rel="icon" type="image/jpeg" href="1000000883.jpg">
     <link rel="shortcut icon" type="image/jpeg" href="1000000883.jpg">
@@ -61,6 +61,29 @@
             border-radius: 4px; cursor: pointer;
         }
         .nav-logout-btn:hover { background-color: #ff4444; }
+
+        /* 📢 실시간 전 서버 글로벌 공지사항 피드 바 스타일 */
+        #globalNoticeTickerBar {
+            background: linear-gradient(90deg, #1e1b10, #0a0f1d);
+            border-bottom: 1px solid #eab308;
+            padding: 6px 20px;
+            font-size: 12px;
+            color: #facc15;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            z-index: 9;
+        }
+        .notice-badge {
+            background-color: #eab308;
+            color: #000000;
+            padding: 2px 6px;
+            font-weight: bold;
+            border-radius: 3px;
+            font-size: 11px;
+            text-transform: uppercase;
+        }
+        #liveNoticeContentText { color: #e2e8f0; font-weight: bold; word-break: break-all; }
 
         /* 로그인 / 회원가입요청 인증 오버레이 */
         #authOverlay {
@@ -163,13 +186,11 @@
         
         #toggleSubPanel { background-color: #090d14; border: 1px solid #222c3c; border-top: none; padding: 15px; margin-bottom: 15px; display: none; }
         .panel-section-title { font-size: 12px; color: #8b9bb4; margin-bottom: 8px; font-weight: bold; }
-        .user-pw-change-box { display: flex; gap: 8px; margin-bottom: 15px; border-bottom: 1px dashed #222c3c; padding-bottom: 15px; }
-        .user-pw-change-box input { flex: 1; background-color: #121824; border: 1px solid #222c3c; padding: 8px; color: white; border-radius: 4px; outline: none; font-size: 13px; }
-        .user-pw-change-btn { background-color: #2563eb; color: white; border: none; padding: 8px 12px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 12px; }
-        .user-pw-change-btn:hover { background-color: #3b82f6; }
         
-        .user-msg-admin-box { display: flex; gap: 8px; margin-bottom: 15px; border-bottom: 1px dashed #222c3c; padding-bottom: 15px; }
-        .user-msg-admin-box input { flex: 1; background-color: #121824; border: 1px solid #222c3c; padding: 8px; color: white; border-radius: 4px; outline: none; font-size: 13px; }
+        /* 🛠️ 아이디 변경, 비밀번호 변경, 문의 전송 박스 정렬 */
+        .user-id-change-box, .user-pw-change-box, .user-msg-admin-box { display: flex; gap: 8px; margin-bottom: 15px; border-bottom: 1px dashed #222c3c; padding-bottom: 15px; }
+        .user-id-change-box input, .user-pw-change-box input, .user-msg-admin-box input { flex: 1; background-color: #121824; border: 1px solid #222c3c; padding: 8px; color: white; border-radius: 4px; outline: none; font-size: 13px; }
+        .user-id-change-btn, .user-pw-change-btn { background-color: #2563eb; color: white; border: none; padding: 8px 12px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 12px; }
         .user-msg-admin-btn { background-color: #10b981; color: white; border: none; padding: 8px 12px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 12px; }
         .user-msg-admin-btn:hover { background-color: #059669; }
         .reset-game-btn { background-color: #b91c1c; color: #ffffff; border: 1px solid #ef4444; padding: 8px 16px; font-weight: bold; border-radius: 4px; cursor: pointer; width: 100%; }
@@ -269,29 +290,12 @@
         .modal-body::-webkit-scrollbar { width: 6px; }
         .modal-body::-webkit-scrollbar-thumb { background: #ff0055; border-radius: 3px; }
 
-        /* 🛠️ 유저 일괄 선택 피드박스 커스텀 */
-        .admin-bulk-user-list {
-            background-color: #06090e; border: 1px solid #222c3c; border-radius: 4px;
-            max-height: 150px; overflow-y: auto; padding: 8px; display: flex; flex-direction: column; gap: 6px;
-        }
-        .bulk-user-item {
-            display: flex; align-items: center; gap: 10px; background-color: #121824;
-            padding: 6px 10px; border-radius: 4px; border: 1px solid #1c2434; font-size: 12px; cursor: pointer;
-        }
+        .admin-bulk-user-list { background-color: #06090e; border: 1px solid #222c3c; border-radius: 4px; max-height: 150px; overflow-y: auto; padding: 8px; display: flex; flex-direction: column; gap: 6px; }
+        .bulk-user-item { display: flex; align-items: center; gap: 10px; background-color: #121824; padding: 6px 10px; border-radius: 4px; border: 1px solid #1c2434; font-size: 12px; cursor: pointer; }
         .bulk-user-item input[type="checkbox"] { width: 15px; height: 15px; cursor: pointer; }
 
-        .form-group { margin-bottom: 12px; }
-        .form-group label { display: block; font-size: 11px; color: #8b9bb4; margin-bottom: 6px; }
-        .form-group input, .form-group select { width: 100%; background-color: #121824; border: 1px solid #222c3c; padding: 10px; color: #ffffff; font-size: 14px; border-radius: 4px; outline: none; }
-        
         .admin-action-row { display: flex; gap: 8px; margin-bottom: 10px; }
         .admin-action-btn { flex: 1; padding: 10px; font-size: 12px; font-weight: bold; border-radius: 4px; border: none; cursor: pointer; color: white; text-align: center; }
-        .btn-plus { background-color: #10b981; }
-        .btn-minus { background-color: #ef4444; }
-        .btn-ban { background-color: #d97706; }
-        .btn-unban { background-color: #2563eb; }
-        .btn-purple { background-color: #8b5cf6; }
-        
         .admin-btn-danger { background-color: #b91c1c; color: white; width: 100%; padding: 12px; border: none; border-radius: 4px; font-weight: bold; font-size: 13px; margin-top: 5px; cursor: pointer; }
         .admin-section-title { font-size: 12px; color: #8b9bb4; margin: 18px 0 8px 0; border-bottom: 1px dashed #222c3c; padding-bottom: 4px; font-weight: bold; }
         .admin-footer-controls { display: flex; gap: 10px; padding: 15px 20px; background-color: #090d14; border-top: 1px solid #222c3c; }
@@ -313,6 +317,11 @@
         </div>
         <button class="nav-center-btn" onclick="openAdminModal()">관리자모드</button>
         <button class="nav-logout-btn" onclick="handleLogout()">로그아웃 (정지)</button>
+    </div>
+
+    <div id="globalNoticeTickerBar">
+        <span class="notice-badge">Notice</span>
+        <span id="liveNoticeContentText">공지사항 데이터 스트리밍을 파싱하고 있습니다...</span>
     </div>
 
     <div id="serverExplosionOverlay">
@@ -365,7 +374,7 @@
     <div id="mainContainer">
         
         <div id="leftPanel">
-            <div class="left-meta-author">Made by <span>시현, 이수</span> 3.1V</div>
+            <div class="left-meta-author">Made by <span>시현, 이수</span> 3.2V</div>
             <div class="bakery-title">이시현의 제과점</div>
             <div id="scoreDisplay">0 시현</div>
             
@@ -378,6 +387,12 @@
             <div class="center-toggle-bar" onclick="toggleSettingArea()">설정 영역 토글</div>
             
             <div id="toggleSubPanel">
+                <div class="panel-section-title">👤 현재 계정 아이디(닉네임) 변경</div>
+                <div class="user-id-change-box">
+                    <input type="text" id="userNewIdInput" placeholder="변경할 새 계정 아이디 입력">
+                    <button class="user-id-change-btn" onclick="executeUserIdentityChange()">변경하기</button>
+                </div>
+
                 <div class="panel-section-title">🔒 현재 계정 비밀번호 변경</div>
                 <div class="user-pw-change-box">
                     <input type="password" id="userNewPwInput" placeholder="변경할 새 비밀번호 입력">
@@ -405,7 +420,7 @@
             
             <div class="prestige-altar-box">
                 <div class="altar-title">✨ 은하계 환생 제단</div>
-                <div class="altar-desc">환생 시 소지금은 초기화되지만 기본 효율이 영구히 폭발적으로 상승합니다.</div>
+                <div class="altar-desc">환생 시 소지금은 초기화되지만 기본 효율이 영구히 상승합니다.</div>
                 <button class="altar-btn" id="prestigeBtn" onclick="triggerPrestige()">다음 환생 비용: 10,000,000 시현</button>
             </div>
 
@@ -479,14 +494,22 @@
     <div class="modal-overlay" id="adminModal">
         <div class="modal-box">
             <div class="modal-header">
-                <div class="modal-title">⚙️ ADMINISTRATOR HYPER CONTROL CONSOLE (v3.1V)</div>
+                <div class="modal-title">⚙️ ADMINISTRATOR HYPER CONTROL CONSOLE (v3.2V)</div>
             </div>
             <div class="modal-box-scroll" style="flex: 1; overflow-y: auto;">
                 <div class="modal-body">
                     <div class="form-group">
                         <label style="color:#00ffcc; font-weight:bold;">👥 제어 및 일괄 밴 유저 멀티 피드 선택 (다중 체크박스 구조)</label>
-                        <div class="admin-bulk-user-list" id="admBulkUserListArea">
-                            </div>
+                        <div class="admin-bulk-user-list" id="admBulkUserListArea"></div>
+                    </div>
+
+                    <div class="admin-section-title" style="color: #eab308; border-color: #eab308;">📢 전 서버 실시간 글로벌 공지사항 제어 센터</div>
+                    <div class="form-group">
+                        <label>전 유저 실시간 공지사항 메시지 원격 강제 인젝션</label>
+                        <input type="text" id="admNoticeInput" placeholder="입력 후 배포 시 전 서버 상단 롤링 배너에 실시간 적용됩니다.">
+                    </div>
+                    <div class="admin-action-row">
+                        <button class="admin-action-btn" style="background-color: #eab308; color: #000000; font-weight: bold;" onclick="executeAdminPublishNotice()">📢 공지사항 전 서버 실시간 주입</button>
                     </div>
 
                     <div class="admin-section-title" style="color: #ff3333; border-color: #ff3333;">🚨 원격 글로벌 코어 하이퍼 인프라 제어</div>
@@ -738,6 +761,21 @@
             location.reload();
         };
 
+        // 👤 실시간 유저 본인 아이디(닉네임) 변경 로직 연동
+        window.executeUserIdentityChange = async function() {
+            const newId = document.getElementById('userNewIdInput').value.trim();
+            if(!newId) { alert("변경할 새 아이디를 입력해주세요."); return; }
+            if(newId === currentUserId) { alert("현재 사용 중인 아이디와 같습니다."); return; }
+            if(confirm("아이디를 실시간 변경하시겠습니까?")) {
+                try {
+                    await updateDoc(doc(db, "users", currentUserId), { userId: newId });
+                    alert("👤 아이디가 성공적으로 실시간 변경되었습니다!");
+                    document.getElementById('userNewIdInput').value = '';
+                    location.reload();
+                } catch(e) { alert("아이디 변경 오류: " + e.message); }
+            }
+        };
+
         window.executeUserPasswordChange = async function() {
             const newPw = document.getElementById('userNewPwInput').value.trim();
             if(!newPw) { alert("변경할 새 비밀번호를 입력해주세요."); return; }
@@ -799,6 +837,35 @@
             } catch(e) { console.error("백업 에러:", e); }
         };
 
+        // 📢 전 서버 실시간 공지사항 수신 리스너 구동 엔진
+        function listenToLiveGlobalNotice() {
+            onSnapshot(doc(db, "system_notice", "live"), (snapshot) => {
+                const textNode = document.getElementById('liveNoticeContentText');
+                if (snapshot.exists()) {
+                    textNode.innerText = snapshot.data().content || "등록된 전 서버 공지사항이 없습니다.";
+                } else {
+                    textNode.innerText = "환영합니다! 시현클리커 v3.2V 실시간 서버 네트워크 연동 완료.";
+                }
+            });
+        }
+
+        // 📢 관리자 원격 공지사항 전 서버 배포 인젝션 실행
+        window.executeAdminPublishNotice = async function() {
+            if (!isAdminAuthenticated) return;
+            const textContent = document.getElementById('admNoticeInput').value.trim();
+            if(!textContent) return alert("배포할 공지사항 내용을 입력해줘!");
+            
+            try {
+                await setDoc(doc(db, "system_notice", "live"), {
+                    content: textContent,
+                    updatedBy: currentUserId,
+                    timestamp: Date.now()
+                });
+                alert("📢 [실시간 공지 주입 성공] 전 서버 상단 공지 배너가 즉시 갱신되었습니다!");
+                document.getElementById('admNoticeInput').value = '';
+            } catch(e) { alert("공지 배포 실패: " + e.message); }
+        };
+
         let isUserAdminPrivilege = false;
 
         function listenToServerExplosionState() {
@@ -846,7 +913,6 @@
             }
         };
 
-        // 🏆 실시간 파이어베이스 연동 무제한 전체 유저 랭킹 트래커 구현
         function startLiveGlobalRankingTracker() {
             onSnapshot(collection(db, "users"), (snapshot) => {
                 const rankingArea = document.getElementById('globalRankingScrollBoard');
@@ -889,7 +955,6 @@
             });
         }
 
-        // 🧹 관리자 전용 채팅 로그 전체 영구 삭제 시스템
         window.executeAdminClearAllChatLogs = async function() {
             if (!isUserAdminPrivilege) return;
             if (confirm("🚨 경고: 파이어베이스 DB에 등록된 전 서버 실시간 채팅 로그를 전부 영구 삭제 청소하시겠습니까?")) {
@@ -945,12 +1010,14 @@
                     listenToGlobalRaidState(); 
                     listenToServerExplosionState(); 
                     startLiveGlobalRankingTracker();
+                    listenToLiveGlobalNotice();
                     startGoldenCookieEngine(); 
                     setInterval(saveGameToServer, 15000);
                 }
             } else {
                 document.getElementById('authOverlay').style.display = 'flex';
                 listenToServerExplosionState(); 
+                listenToLiveGlobalNotice();
             }
         });
 
@@ -1359,7 +1426,6 @@
             loadAdminTicketsFeed(); 
         };
 
-        // 🛠️ 체크박스 다중 유저 선택 명단 인프라 렌더러 구현
         async function loadUserBulkList() {
             const container = document.getElementById('admBulkUserListArea');
             container.innerHTML = '<div style="color: #62738d; padding: 10px; font-size:11px;">유저 명단 스캔 중...</div>';
@@ -1393,7 +1459,6 @@
             } catch(e) { container.innerHTML = '<div style="color: #ef4444; padding: 10px;">명단 파싱 실패</div>'; }
         }
 
-        // 체크박스 제재 유저 리스트 추출용 내부 유틸리티
         function getCheckedUserIds() {
             const checkboxes = document.querySelectorAll('input[name="bulkUserCheck"]:checked');
             const ids = [];
@@ -1403,13 +1468,11 @@
             return ids;
         }
 
-        // 단일 유저 처리용 첫번째 체크 대상 탐색기
         function getFirstCheckedUserId() {
             const checkboxes = document.querySelectorAll('input[name="bulkUserCheck"]:checked');
             return checkboxes.length > 0 ? checkboxes[0].value : "";
         }
 
-        // ⏳ 1) 선택유저 일괄 기간제 타임 밴 집행
         window.executeAdminBulkTimeBan = async function() {
             const targetIds = getCheckedUserIds();
             const seconds = parseInt(document.getElementById('admBanSecondsInput').value);
@@ -1430,7 +1493,6 @@
             }
         };
 
-        // 🔴 2) 선택유저 일괄 계정 영구 밴 강제 단행
         window.executeAdminBulkPermBan = async function() {
             const targetIds = getCheckedUserIds();
             if(targetIds.length === 0) return alert("영구 밴 조치할 대상들을 명단에서 체크해줘!");
@@ -1447,7 +1509,6 @@
             }
         };
 
-        // 🔓 3) 선택유저 일괄 모든 밴 전면 특별 사면
         window.executeAdminBulkUnban = async function() {
             const targetIds = getCheckedUserIds();
             if(targetIds.length === 0) return alert("사면 면제 조치할 대상을 체크해줘!");
@@ -1464,7 +1525,6 @@
             }
         };
 
-        // 🚫 4) 일괄 채팅방 차단 및 허용 조절
         window.executeBulkToggleChatBan = async function(shouldBan) {
             const targetIds = getCheckedUserIds();
             if(targetIds.length === 0) return alert("채팅 권한을 조율할 대상을 목록에서 체크해줘!");
@@ -1478,7 +1538,6 @@
             } catch(e) { alert("권한 인젝션 실패: " + e.message); }
         };
 
-        // ❌ 5) 선택한 유저 일괄 회원 이탈 파괴 (DB 완전 삭제)
         window.executeBulkDeleteUserAccounts = async function() {
             const targetIds = getCheckedUserIds();
             if(targetIds.length === 0) return alert("DB 도큐먼트를 삭제해버릴 대상을 선택해줘!");
