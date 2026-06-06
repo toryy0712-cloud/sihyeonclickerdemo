@@ -3,6 +3,111 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sihyun Clicker v3.2V - Hyper Admin Edition</title>
+    <!-- ... (CSS 영역은 기존의 안정된 스타일 시트를 유지합니다) ... -->
+    <style>
+        /* [중략: 기존 스타일 생략 - 전체 코드 복사 시 기존 CSS 활용] */
+        .admin-action-btn { width: 100%; padding: 10px; margin-top:5px; cursor: pointer; border-radius: 4px; border: none; font-weight: bold; background: #3b82f6; color: white; }
+    </style>
+</head>
+<body>
+    <!-- [중략: 메인 UI 유지] -->
+    
+    <!-- 관리자 모달 -->
+    <div class="modal-overlay" id="adminModal">
+        <div class="modal-box">
+            <div class="modal-header">
+                <div class="modal-title">⚙️ HYPER CONTROL CONSOLE (v3.2V)</div>
+            </div>
+            <div class="modal-body">
+                <!-- 1. 시뮬레이션 및 알림 -->
+                <div class="admin-section-title">🖥️ 시스템 시뮬레이터 & 인젝터</div>
+                <button class="admin-action-btn" style="background:#1e293b;" onclick="toggleAdminPreview()">상점 단가 프리뷰: <span id="previewStatus">OFF</span></button>
+                <input type="text" id="admAlertPopupInput" placeholder="전 서버 강제 팝업 메시지" style="width:100%; padding:8px; margin-top:5px; background:#121824; color:white; border:1px solid #222c3c;">
+                <button class="admin-action-btn" style="background:#dc2626;" onclick="executeAdminBroadcastAlertPopup()">🚨 전 서버 강제 알림 발송</button>
+
+                <!-- 2. 도박 확률 제어 -->
+                <div class="admin-section-title">🎲 쿠키 도박장 확률 제어</div>
+                <input type="number" id="admGambleOdds" placeholder="승리 확률 (0.0 ~ 1.0, 기본: 0.5)" style="width:100%; padding:8px; background:#121824; color:white; border:1px solid #222c3c;">
+                <button class="admin-action-btn" style="background:#8b5cf6;" onclick="updateGambleOdds()">확률 주입 적용</button>
+
+                <!-- 3. 유저 생성 -->
+                <div class="admin-section-title">➕ 신규 유저 강제 생성</div>
+                <input type="text" id="admNewUserId" placeholder="생성할 유저 ID" style="width:100%; padding:8px; background:#121824; color:white; border:1px solid #222c3c;">
+                <input type="password" id="admNewUserPw" placeholder="비밀번호" style="width:100%; padding:8px; margin-top:5px; background:#121824; color:white; border:1px solid #222c3c;">
+                <button class="admin-action-btn" style="background:#10b981;" onclick="executeAdminAddUser()">새 유저 생성</button>
+
+                <!-- 4. 메시지 청소 -->
+                <div class="admin-section-title">📬 데이터 정화</div>
+                <button class="admin-btn-danger" onclick="executeAdminClearAllData()">🗑️ 모든 메시지 내역 영구 파괴</button>
+            </div>
+            <div class="admin-footer-controls">
+                <button class="footer-exit-btn-unified" onclick="exitAdminConsole()">❌ 관리자 제어실 닫기</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getAuth, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { getFirestore, doc, setDoc, updateDoc, collection, getDocs, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        // [중략: 기존 변수 초기화 동일]
+        let gambleOdds = 0.5; // 도박 승리 확률
+
+        // 1. [신설] 유저 생성 로직
+        window.executeAdminAddUser = async function() {
+            const id = document.getElementById('admNewUserId').value.trim();
+            const pw = document.getElementById('admNewUserPw').value.trim();
+            if(!id || !pw) return alert("ID와 PW를 입력하세요.");
+            try {
+                const authInstance = getAuth();
+                await createUserWithEmailAndPassword(authInstance, `${id}@clicker.com`, pw);
+                await setDoc(doc(db, "users", id), {
+                    userId: id,
+                    gameSave: { score: 0, totalClicks: 0, prestigeCount: 0, cheatBonusSps: 0 },
+                    isAdmin: false
+                });
+                alert("✅ 유저 생성 성공!");
+            } catch(e) { alert("생성 실패: " + e.message); }
+        };
+
+        // 2. [신설] 도박 확률 적용
+        window.updateGambleOdds = function() {
+            const val = parseFloat(document.getElementById('admGambleOdds').value);
+            if(val >= 0 && val <= 1) { gambleOdds = val; alert(`승리 확률이 ${val * 100}%로 설정되었습니다.`); }
+            else alert("0과 1 사이의 값을 입력하세요.");
+        };
+
+        // 3. [신설] 쿠키 도박 실행 (중앙 설정으로 이동)
+        window.playCookieGamble = function() {
+            if(isUserAdminPrivilege) return alert("관리자는 도박 불가.");
+            if(score < 10) return alert("시현 부족.");
+            score -= 10;
+            if(Math.random() < gambleOdds) { score += 15; alert("승리!"); } 
+            else { score += 5; alert("패배..."); }
+            updateDisplay();
+        };
+
+        // 4. [신설] 랭커 SPS 축복 엔진 (자동 계산)
+        async function runRankerBuffEngine() {
+            const users = await getDocs(collection(db, "users"));
+            let rankList = [];
+            users.forEach(d => rankList.push({ id: d.id, score: d.data().gameSave.score }));
+            rankList.sort((a, b) => b.score - a.score);
+            
+            const rewards = [500000, 200000, 100000];
+            for(let i=0; i<Math.min(rankList.length, 3); i++) {
+                await updateDoc(doc(db, "users", rankList[i].id), { "gameSave.cheatBonusSps": rewards[i] });
+            }
+        }
+        setInterval(runRankerBuffEngine, 30000); // 30초마다 랭커 갱신
+
+        // [중략: 나머지 기존 로직 유지]
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sihyun Clicker v3.2V (Admin Realtime Notice & ID Changer Edition)</title>
     
     <link rel="icon" type="image/jpeg" href="1000000883.jpg">
