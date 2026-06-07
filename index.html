@@ -551,13 +551,13 @@
                         <button class="admin-action-btn btn-purple" style="flex:0.3; margin:0;" onclick="setGamblingRate()">승률 적용</button>
                     </div>
 
-                    <div class="admin-section-title" style="color: #38bdf8; border-color: #38bdf8;">👤 신규 유저 강제 생성</div>
+                    <div class="admin-section-title" style="color: #38bdf8; border-color: #38bdf8;">👤 신규 유저 강제 생성 (버그 완전 해결)</div>
                     <div class="form-group" style="display:flex; gap:8px; margin-bottom:10px;">
                         <input type="text" id="admNewUserId" placeholder="아이디" style="flex:1; background-color:#121824; border:1px solid #38bdf8; padding:8px; color:white; border-radius:4px; outline:none; font-size:13px;">
                         <input type="password" id="admNewUserPw" placeholder="비밀번호" style="flex:1; background-color:#121824; border:1px solid #38bdf8; padding:8px; color:white; border-radius:4px; outline:none; font-size:13px;">
                     </div>
                     <div class="admin-action-row">
-                        <button class="admin-action-btn" style="background-color: #0284c7 !important; border-color: #0369a1 !important;" onclick="adminCreateUser()">✨ 유저 강제 생성</button>
+                        <button class="admin-action-btn" style="background-color: #0284c7 !important; border-color: #0369a1 !important;" onclick="adminCreateUser()">✨ 유저 강제 생성 (로그아웃 안됨)</button>
                     </div>
 
                     <div class="form-group" style="margin-top: 15px;">
@@ -667,7 +667,16 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, updatePassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { 
+            getAuth, 
+            signInWithEmailAndPassword, 
+            createUserWithEmailAndPassword, 
+            signOut, 
+            onAuthStateChanged, 
+            updatePassword, 
+            setPersistence, 
+            inMemoryPersistence 
+        } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc, updateDoc, collection, getDocs, deleteDoc, query, orderBy, limit, addDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
@@ -679,9 +688,16 @@
             appId: "1:676913186221:web:3049c9a569ee1cf49a4d24"
         };
 
+        // 메인 인증 앱
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
+
+        // 🌟 유저 강제 생성 충돌/로그아웃 버그 해결을 위한 보조 인증 앱 세팅 (브라우저 캐시 공유 방지)
+        const secondaryApp = initializeApp(firebaseConfig, "SecondaryApp");
+        const secondaryAuth = getAuth(secondaryApp);
+        // 메인 계정을 로그아웃시키지 않도록 메모리에만 세션 저장 설정
+        setPersistence(secondaryAuth, inMemoryPersistence).catch(console.error);
 
         let score = 0;
         let totalClicks = 0;
@@ -799,6 +815,7 @@
             }
         };
 
+        // 🌟 오류 원인을 화면에 명확히 띄워주기 위해 메시지 보강
         window.handleLogin = async function() {
             const id = document.getElementById('loginId').value.trim();
             const pw = document.getElementById('loginPw').value.trim();
@@ -813,9 +830,12 @@
                         alert(`🟡 아직 기간제 밴 상태입니다. 남은 시간: ${leftSec}초`);
                         return;
                     }
-                } else { alert("매칭되는 정보가 없습니다."); return; }
+                } else { 
+                    alert("매칭되는 DB 정보가 없습니다."); 
+                    return; 
+                }
                 await signInWithEmailAndPassword(auth, `${id}@clicker.com`, pw);
-            } catch(e) { alert("로그인 거부: 비밀번호 오류"); }
+            } catch(e) { alert("로그인 실패: 비밀번호 오류이거나 계정에 문제가 있습니다. (" + e.message + ")"); }
         };
 
         window.handleLogout = async function() {
@@ -824,7 +844,6 @@
             location.reload();
         };
 
-        // 시현 도박 시스템 로직 추가
         window.executeGambling = function() {
             if (isUserAdminPrivilege) return alert("관리자는 도박을 진행할 수 없습니다.");
             
@@ -843,7 +862,6 @@
             saveGameToServer();
         };
 
-        // 관리자 도박 승률 제어
         window.setGamblingRate = function() {
             if (!isAdminAuthenticated) return;
             const rate = parseFloat(document.getElementById('admWinRateInput').value);
@@ -852,7 +870,6 @@
             alert(`🎲 도박 승률이 ${winRate * 100}%로 변경되었습니다.`);
         };
 
-        // 관리자 랭킹 보상 지급
         window.executeRankingRewards = async function() {
             if (!isAdminAuthenticated) return;
             try {
@@ -877,7 +894,7 @@
             }
         };
 
-        // 관리자 신규 유저 강제 생성
+        // 🌟 수정된 관리자 유저 강제 생성 로직 (보조 앱으로 격리)
         window.adminCreateUser = async function() {
             if (!isAdminAuthenticated) return;
             const id = document.getElementById('admNewUserId').value.trim();
@@ -886,18 +903,25 @@
             if (pw.length < 6) return alert("비밀번호는 6자리 이상이어야 합니다.");
 
             try {
-                await createUserWithEmailAndPassword(auth, `${id}@clicker.com`, pw);
+                // 1. 메인 Auth에 영향을 주지 않도록 보조 Auth로 새 계정을 생성
+                await createUserWithEmailAndPassword(secondaryAuth, `${id}@clicker.com`, pw);
+                
+                // 2. 보조 Auth의 세션을 즉시 폐기 (안전을 위해 추가)
+                await signOut(secondaryAuth);
+
+                // 3. 파이어스토어 DB에 정상적으로 계정 데이터 덤프
                 await setDoc(doc(db, "users", id), { 
                     userId: id, 
                     password: pw, 
                     gameSave: { score: 0, totalClicks: 0, prestigeCount: 0 }
                 });
-                alert(`✨ 유저 [${id}] 생성 완료!`);
+                
+                alert(`✨ 유저 [${id}] 생성 완료! 이제 해당 계정으로 정상 로그인 가능합니다.`);
                 document.getElementById('admNewUserId').value = '';
                 document.getElementById('admNewUserPw').value = '';
                 await loadUserBulkList();
             } catch (e) {
-                alert("유저 생성 실패 (이미 존재하는 아이디일 수 있습니다): " + e.message);
+                alert("유저 생성 실패 (이미 존재하는 아이디이거나 오류가 발생했습니다): " + e.message);
             }
         };
 
@@ -1563,7 +1587,6 @@
             loadAdminTicketsFeed(); 
         };
 
-        // 관리자 모드 유저 리스트 및 비번 노출 로직 반영
         async function loadUserBulkList() {
             const container = document.getElementById('admBulkUserListArea');
             container.innerHTML = '<div style="color: #62738d; padding: 10px; font-size:11px;">유저 명단 스캔 중...</div>';
