@@ -1649,7 +1649,7 @@
         window.openAdminModal = function() {
             if (!isAdminAuthenticated) {
                 if (isUserAdminPrivilege === true) {
-                    const pw2 = prompt("보안을 위해 관리자 2차 인증 코드를 입력하세요 (626262):");
+                    const pw2 = prompt("보안을 위해 관리자 2차 인증 코드를 입력하세요");
                     if (pw2 === "626262") { 
                         isAdminAuthenticated = true; 
                     } else {
