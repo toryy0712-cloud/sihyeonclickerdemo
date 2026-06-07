@@ -9,7 +9,6 @@
     <link rel="shortcut icon" type="image/jpeg" href="1000000883.jpg">
 
     <style>
-        /* 🎨 시스템 설정 연동: 다크/라이트 모드 변수 선언 */
         :root {
             --bg-main: #0c1017;
             --bg-panel: #090d14;
@@ -57,7 +56,6 @@
             position: relative;
         }
 
-        /* --- 상단 글로벌 네비게이션 바 --- */
         #topNavBar {
             height: 45px;
             background-color: var(--bg-nav);
@@ -91,7 +89,6 @@
         }
         .nav-logout-btn:hover { background-color: #ff4444; }
 
-        /* 📢 실시간 전 서버 글로벌 공지사항 피드 바 스타일 */
         #globalNoticeTickerBar {
             background: linear-gradient(90deg, #1e1b10, #0a0f1d);
             border-bottom: 1px solid #eab308;
@@ -126,7 +123,6 @@
         #liveNoticeContentText::-webkit-scrollbar { width: 4px; }
         #liveNoticeContentText::-webkit-scrollbar-thumb { background: #eab308; border-radius: 2px; }
 
-        /* 로그인 / 회원가입요청 인증 오버레이 */
         #authOverlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background-color: rgba(6, 9, 14, 0.98); z-index: 9999;
@@ -164,7 +160,6 @@
             padding: 14px; font-size: 16px; font-weight: bold; border-radius: 5px; cursor: pointer;
         }
 
-        /* 🚨 전 서버 실시간 폭발 시스템 오버레이 */
         #serverExplosionOverlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background-color: #000000; z-index: 100000;
@@ -181,10 +176,8 @@
         .explosion-restore-btn { width: 100%; background-color: #ff2222; color: #000000; font-weight: bold; border: none; padding: 12px; border-radius: 4px; cursor: pointer; }
         .explosion-restore-btn:hover { background-color: #ff5555; }
 
-        /* 메인 레이아웃 3단 분할 */
         #mainContainer { flex: 1; display: flex; overflow: hidden; }
 
-        /* 좌측 영역 */
         #leftPanel {
             width: 25%; border-right: 1px solid var(--border-color); padding: 20px;
             display: flex; flex-direction: column; align-items: center;
@@ -207,7 +200,6 @@
         }
         @keyframes pulseGlow { 0% { transform: scale(1); box-shadow: 0 0 10px #eab308; } 100% { transform: scale(1.15); box-shadow: 0 0 25px #facc15; } }
 
-        /* 중간 영역 */
         #centerPanel {
             width: 40%; display: flex; flex-direction: column; padding: 15px 20px;
             background-color: var(--bg-main); overflow-y: auto;
@@ -242,7 +234,6 @@
         .altar-desc { color: #c084fc; font-size: 11px; margin-bottom: 15px; }
         .altar-btn { background-color: #a855f7; color: #ffffff; border: none; width: 70%; padding: 10px; font-weight: bold; border-radius: 4px; cursor: pointer; }
 
-        /* 🏆 실시간 무제한 전체 유저 랭킹 스타일 */
         .global-ranking-container { border: 1px solid #38bdf8; background-color: var(--bg-panel); border-radius: 6px; padding: 12px; margin-bottom: 15px; }
         .ranking-title { font-size: 13px; font-weight: bold; color: #38bdf8; border-bottom: 1px solid var(--border-color); padding-bottom: 6px; margin-bottom: 8px; display: flex; justify-content: space-between; }
         .ranking-scroll-area { max-height: 140px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
@@ -260,7 +251,6 @@
         .mini-badge-slot { width: 32px; height: 32px; background-color: var(--input-bg); border: 1px solid var(--border-color); border-radius: 4px; display: flex; align-items: center; justify-content: center; opacity: 0.2; font-size: 16px; }
         .mini-badge-slot.unlocked { opacity: 1; border-color: #eab308; background-color: #1e1b10; }
 
-        /* 💬 실시간 대화방 */
         .chat-room-container { border: 1px solid var(--border-color); background-color: var(--bg-panel); border-radius: 6px; display: flex; flex-direction: column; height: 230px; margin-top: auto; }
         .chat-header { background-color: var(--input-bg); padding: 8px 12px; font-size: 12px; font-weight: bold; color: #00ffcc; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; }
         .chat-messages { flex: 1; padding: 10px; overflow-y: auto; font-size: 12px; display: flex; flex-direction: column; gap: 6px; }
@@ -275,7 +265,6 @@
         .chat-send-btn { background-color: var(--input-bg); border: none; color: var(--text-sub); padding: 0 15px; cursor: pointer; font-size: 12px; }
         .chat-send-btn:hover { color: var(--text-main); background-color: var(--border-color); }
 
-        /* 우측 영역 */
         #rightPanel { width: 35%; border-left: 1px solid var(--border-color); display: flex; flex-direction: column; background-color: var(--bg-panel); overflow: hidden; }
         .store-header-title { font-size: 22px; font-weight: bold; text-align: center; padding: 15px 0 10px 0; letter-spacing: 2px; color: var(--text-main); }
         
@@ -312,10 +301,8 @@
         .floating-text { position: absolute; color: #38bdf8; font-weight: bold; font-size: 22px; pointer-events: none; animation: floatUp 0.8s ease-out forwards; text-shadow: 0 0 6px rgba(0,0,0,1); z-index: 1000; }
         @keyframes floatUp { 0% { transform: translateY(0) scale(1); opacity: 1; } 100% { transform: translateY(-80px) scale(0.8); opacity: 0; } }
 
-        /* 모달 인프라 스크롤 최적화 */
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.85); z-index: 10000; display: flex; justify-content: center; align-items: center; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
         .modal-overlay.active { opacity: 1; pointer-events: auto; }
-        /* 유저 화면 보기 모달은 z-index를 더 높게 */
         .modal-overlay.user-screen { z-index: 10001; }
         
         .modal-box { background-color: var(--modal-bg); border: 1px solid #ff0055; width: 540px; max-height: 95vh; border-radius: 8px; display: flex; flex-direction: column; overflow: hidden; }
@@ -600,9 +587,11 @@
             <div class="modal-box-scroll" style="flex: 1; overflow-y: auto;">
                 <div class="modal-body">
                     
-                    <div class="admin-section-title" style="color: #facc15; border-color: #facc15;">💰 랭킹 보상 자동 지급 시스템</div>
-                    <div class="admin-action-row">
-                        <button class="admin-action-btn" style="background-color: #eab308 !important; border-color: #facc15 !important; color: black !important;" onclick="executeRankingRewards()">🏆 1~3등 보상 즉시 지급 (30만/20만/30만)</button>
+                    <div id="adminSectionRanking">
+                        <div class="admin-section-title" style="color: #facc15; border-color: #facc15;">💰 랭킹 보상 자동 지급 시스템 (최고관리자 전용)</div>
+                        <div class="admin-action-row">
+                            <button class="admin-action-btn" style="background-color: #eab308 !important; border-color: #facc15 !important; color: black !important;" onclick="executeRankingRewards()">🏆 1~3등 보상 즉시 지급 (30만/20만/30만)</button>
+                        </div>
                     </div>
 
                     <div class="admin-section-title" style="color: #a855f7; border-color: #a855f7;">🎲 도박 승률 제어 (0.0 ~ 1.0)</div>
@@ -611,13 +600,15 @@
                         <button class="admin-action-btn btn-purple" style="flex:0.3; margin:0;" onclick="setGamblingRate()">승률 적용</button>
                     </div>
 
-                    <div class="admin-section-title" style="color: #38bdf8; border-color: #38bdf8;">👤 신규 유저 강제 생성 (기본자본 100 시현 지급)</div>
-                    <div class="form-group" style="display:flex; gap:8px; margin-bottom:10px;">
-                        <input type="text" id="admNewUserId" placeholder="아이디" style="flex:1; background-color:var(--input-bg); border:1px solid #38bdf8; padding:8px; color:var(--text-main); border-radius:4px; outline:none; font-size:13px;">
-                        <input type="password" id="admNewUserPw" placeholder="비밀번호" style="flex:1; background-color:var(--input-bg); border:1px solid #38bdf8; padding:8px; color:var(--text-main); border-radius:4px; outline:none; font-size:13px;">
-                    </div>
-                    <div class="admin-action-row">
-                        <button class="admin-action-btn" style="background-color: #0284c7 !important; border-color: #0369a1 !important;" onclick="adminCreateUser()">✨ 유저 강제 생성 (로그아웃 안됨)</button>
+                    <div id="adminSectionCreateUser">
+                        <div class="admin-section-title" style="color: #38bdf8; border-color: #38bdf8;">👤 신규 유저 강제 생성 (최고관리자 전용)</div>
+                        <div class="form-group" style="display:flex; gap:8px; margin-bottom:10px;">
+                            <input type="text" id="admNewUserId" placeholder="아이디" style="flex:1; background-color:var(--input-bg); border:1px solid #38bdf8; padding:8px; color:var(--text-main); border-radius:4px; outline:none; font-size:13px;">
+                            <input type="password" id="admNewUserPw" placeholder="비밀번호" style="flex:1; background-color:var(--input-bg); border:1px solid #38bdf8; padding:8px; color:var(--text-main); border-radius:4px; outline:none; font-size:13px;">
+                        </div>
+                        <div class="admin-action-row">
+                            <button class="admin-action-btn" style="background-color: #0284c7 !important; border-color: #0369a1 !important;" onclick="adminCreateUser()">✨ 유저 강제 생성 (로그아웃 안됨)</button>
+                        </div>
                     </div>
 
                     <div class="form-group" style="margin-top: 15px;">
@@ -646,17 +637,18 @@
                         <button class="admin-action-btn" style="background-color: #4b5563 !important; border-color: #6b7280 !important;" onclick="executeAdminControlRaid('STOP')">🛑 레이드 즉시 중지</button>
                     </div>
                     
-                    <div class="admin-section-title">📊 라이브 스탯 인젝션 제어 (체크된 전체 대상 적용)</div>
-                    <div class="form-group">
-                        <label>변동할 수치 (쿠키 점수 / SPS / 환생 일괄 적용 수치)</label>
-                        <input type="number" id="admAmountInput" placeholder="수치를 입력하세요 (예: 5000)">
-                    </div>
-
-                    <div class="admin-action-row">
-                        <button class="admin-action-btn btn-plus" onclick="adjustUserStat('score', 'plus')">점수 (+)</button>
-                        <button class="admin-action-btn btn-minus" onclick="adjustUserStat('score', 'minus')">점수 (-)</button>
-                        <button class="admin-action-btn btn-plus" onclick="adjustUserStat('sps', 'plus')">SPS (+)</button>
-                        <button class="admin-action-btn btn-minus" onclick="adjustUserStat('sps', 'minus')">SPS (-)</button>
+                    <div id="adminSectionStats">
+                        <div class="admin-section-title">📊 라이브 스탯 인젝션 제어 (최고관리자 전용)</div>
+                        <div class="form-group">
+                            <label>변동할 수치 (쿠키 점수 / SPS / 환생 일괄 적용 수치)</label>
+                            <input type="number" id="admAmountInput" placeholder="수치를 입력하세요 (예: 5000)">
+                        </div>
+                        <div class="admin-action-row">
+                            <button class="admin-action-btn btn-plus" onclick="adjustUserStat('score', 'plus')">점수 (+)</button>
+                            <button class="admin-action-btn btn-minus" onclick="adjustUserStat('score', 'minus')">점수 (-)</button>
+                            <button class="admin-action-btn btn-plus" onclick="adjustUserStat('sps', 'plus')">SPS (+)</button>
+                            <button class="admin-action-btn btn-minus" onclick="adjustUserStat('sps', 'minus')">SPS (-)</button>
+                        </div>
                     </div>
 
                     <div class="admin-section-title">🎁 원격 아이템 수량 조절 제어 (체크된 전체 대상 적용)</div>
@@ -692,6 +684,32 @@
                         <button class="admin-action-btn btn-ban" style="background-color: #ea580c !important; border-color: #f97316 !important;" onclick="executeAdminUserPasswordOverride()">⚠️ 선택한 유저 비밀번호 강제 덮어쓰기</button>
                     </div>
 
+                    <div id="adminSectionBan">
+                        <div class="admin-section-title" style="color: #e11d48; font-weight: bold; border-color: #e11d48;">🛑 원격 일괄 시스템 제재 및 차단 제어 (최고관리자 전용)</div>
+                        <div class="form-group">
+                            <label>⏱️ 기간제 밴 시간 설정 (초 단위)</label>
+                            <input type="number" id="admBanSecondsInput" placeholder="정지시킬 시간 입력 (예: 60)">
+                        </div>
+                        
+                        <div class="admin-action-row">
+                            <button class="admin-action-btn btn-ban" onclick="executeAdminBulkTimeBan()">⏳ 선택유저 일괄 타임 밴 집행</button>
+                            <button class="admin-action-btn btn-minus" onclick="executeAdminBulkPermBan()">🔴 선택유저 일괄 영구 밴 집행</button>
+                            <button class="admin-action-btn btn-unban" onclick="executeAdminBulkUnban()">🔓 선택유저 일괄 모든 밴 해제</button>
+                        </div>
+                        
+                        <div class="admin-action-row">
+                            <button class="admin-action-btn btn-purple" onclick="executeBulkToggleChatBan(true)">🚫 일괄 월드 채팅 차단</button>
+                            <button class="admin-action-btn btn-unban" onclick="executeBulkToggleChatBan(false)">✅ 일괄 월드 채팅 허용</button>
+                        </div>
+
+                        <div class="admin-action-row">
+                            <button class="admin-action-btn btn-minus" onclick="executeBulkToggleScoreLock(true)">🔒 일괄 점수획득 불가(관전자) 지정</button>
+                            <button class="admin-action-btn btn-unban" onclick="executeBulkToggleScoreLock(false)">🔓 일괄 점수획득 허용</button>
+                        </div>
+
+                        <button class="admin-btn-danger" onclick="executeBulkDeleteUserAccounts()">❌ 선택한 유저 무리 일괄 DB에서 영구 삭제</button>
+                    </div>
+
                     <div class="admin-section-title" style="color: #00ffcc; border-color: #00ffcc; display:flex; justify-content:space-between; align-items:center;">
                         <span>📬 실시간 유저 접수 메시지 라이브 피드</span>
                         <button class="chat-clear-btn" style="display:inline-block; background-color:#b91c1c; color:white; border:none; padding:2px 8px; border-radius:3px; cursor:pointer;" onclick="executeAdminClearAllTickets()">🧹 모두 지우기</button>
@@ -700,29 +718,6 @@
                         <div style="color: var(--text-sub); font-size: 11px; text-align: center; padding: 10px;">접수된 내역이 없습니다.</div>
                     </div>
 
-                    <div class="admin-section-title" style="color: #e11d48; font-weight: bold; border-color: #e11d48;">🛑 원격 일괄 시스템 제재 및 차단 제어 (체크박스 다중 유저 전체 대상)</div>
-                    <div class="form-group">
-                        <label>⏱️ 기간제 밴 시간 설정 (초 단위)</label>
-                        <input type="number" id="admBanSecondsInput" placeholder="정지시킬 시간 입력 (예: 60)">
-                    </div>
-                    
-                    <div class="admin-action-row">
-                        <button class="admin-action-btn btn-ban" onclick="executeAdminBulkTimeBan()">⏳ 선택유저 일괄 타임 밴 집행</button>
-                        <button class="admin-action-btn btn-minus" onclick="executeAdminBulkPermBan()">🔴 선택유저 일괄 영구 밴 집행</button>
-                        <button class="admin-action-btn btn-unban" onclick="executeAdminBulkUnban()">🔓 선택유저 일괄 모든 밴 해제</button>
-                    </div>
-                    
-                    <div class="admin-action-row">
-                        <button class="admin-action-btn btn-purple" onclick="executeBulkToggleChatBan(true)">🚫 일괄 월드 채팅 차단</button>
-                        <button class="admin-action-btn btn-unban" onclick="executeBulkToggleChatBan(false)">✅ 일괄 월드 채팅 허용</button>
-                    </div>
-
-                    <div class="admin-action-row">
-                        <button class="admin-action-btn btn-minus" onclick="executeBulkToggleScoreLock(true)">🔒 일괄 점수획득 불가(관전자) 지정</button>
-                        <button class="admin-action-btn btn-unban" onclick="executeBulkToggleScoreLock(false)">🔓 일괄 점수획득 허용</button>
-                    </div>
-
-                    <button class="admin-btn-danger" onclick="executeBulkDeleteUserAccounts()">❌ 선택한 유저 무리 일괄 DB에서 영구 삭제</button>
                 </div>
             </div>
 
@@ -757,7 +752,6 @@
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc, updateDoc, collection, getDocs, deleteDoc, query, orderBy, limit, addDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-        // 우클릭 방지 시스템
         window.addEventListener('contextmenu', function (e) {
             e.preventDefault();
         });
@@ -951,6 +945,8 @@
 
         window.executeRankingRewards = async function() {
             if (!isAdminAuthenticated) return;
+            if (!isUserSuperAdmin) return alert("최고관리자(Super Admin) 전용 권한입니다.");
+            
             try {
                 const snap = await getDocs(collection(db, "users"));
                 let usersList = [];
@@ -975,6 +971,8 @@
 
         window.adminCreateUser = async function() {
             if (!isAdminAuthenticated) return;
+            if (!isUserSuperAdmin) return alert("최고관리자(Super Admin) 전용 권한입니다.");
+            
             const id = document.getElementById('admNewUserId').value.trim().toLowerCase();
             const pw = document.getElementById('admNewUserPw').value.trim();
             if (!id || !pw) return alert("아이디와 비밀번호를 모두 입력해주세요.");
@@ -1101,6 +1099,7 @@
             } catch(e) { alert("공지 배포 실패: " + e.message); }
         };
 
+        let isUserSuperAdmin = false;
         let isUserAdminPrivilege = false;
         let isUserScoreLocked = false; 
 
@@ -1230,7 +1229,8 @@
                         return; 
                     }
                     
-                    isUserAdminPrivilege = d.isAdmin || false;
+                    isUserSuperAdmin = d.isSuperAdmin || false;
+                    isUserAdminPrivilege = d.isAdmin || isUserSuperAdmin || false;
                     isUserScoreLocked = d.isScoreLocked || false; 
                     
                     if (isUserAdminPrivilege) {
@@ -1613,7 +1613,7 @@
 
                     const targetCheck = await getDoc(doc(db, "users", targetReceiver));
                     if(!targetCheck.exists() && targetReceiver !== 'admin' && targetReceiver !== '시현') {
-                        alert("⚠️ 존재하지 않는 유저입니다.");
+                        alert("⚠️ 존재하지 유저입니다.");
                         return;
                     }
 
@@ -1661,10 +1661,15 @@
             });
         }
 
-        // 🌟 커스텀 보안 인증 팝업 로직 적용 (마스킹 완료)
         let adminAuthStep = 1;
 
         window.openAdminModal = function() {
+            if (isUserSuperAdmin) {
+                isAdminAuthenticated = true;
+                showAdminDashboard();
+                return;
+            }
+
             if (!isAdminAuthenticated) {
                 if (isUserAdminPrivilege === true) {
                     adminAuthStep = 2;
@@ -1674,11 +1679,22 @@
                     showAdminAuthModal("🔒 관리자 1차 인증", "관리자 보안 원격 암호를 입력하세요.");
                 }
             } else {
-                document.getElementById('adminModal').classList.add('active');
-                loadUserBulkList();
-                loadAdminTicketsFeed(); 
+                showAdminDashboard();
             }
         };
+
+        function showAdminDashboard() {
+            document.getElementById('adminModal').classList.add('active');
+            
+            const superDisplayStyle = isUserSuperAdmin ? 'block' : 'none';
+            document.getElementById('adminSectionRanking').style.display = superDisplayStyle;
+            document.getElementById('adminSectionCreateUser').style.display = superDisplayStyle;
+            document.getElementById('adminSectionStats').style.display = superDisplayStyle;
+            document.getElementById('adminSectionBan').style.display = superDisplayStyle;
+
+            loadUserBulkList();
+            loadAdminTicketsFeed(); 
+        }
 
         function showAdminAuthModal(title, desc) {
             document.getElementById('adminAuthTitle').innerText = title;
@@ -1707,9 +1723,7 @@
                 if (val === "626262") {
                     isAdminAuthenticated = true;
                     closeAdminAuth();
-                    document.getElementById('adminModal').classList.add('active');
-                    loadUserBulkList();
-                    loadAdminTicketsFeed();
+                    showAdminDashboard();
                 } else {
                     alert("❌ 2차 인증 코드가 틀렸습니다.");
                     closeAdminAuth();
@@ -1717,7 +1731,6 @@
             }
         };
 
-        // 👀 유저 화면 훔쳐보기 기능 스크립트!
         window.viewUserScreen = async function(targetId) {
             try {
                 const snap = await getDoc(doc(db, "users", targetId));
@@ -1772,7 +1785,8 @@
                     if(userData.isPermanentBan) tags.push("영구밴");
                     if(userData.banExpiry && userData.banExpiry > Date.now()) tags.push("기간밴");
                     if(userData.isChatBanned) tags.push("채팅차단");
-                    if(userData.isAdmin) tags.push("👑관리자");
+                    if(userData.isSuperAdmin) tags.push("👑최고관리자");
+                    else if(userData.isAdmin) tags.push("🛡️일반관리자");
                     if(userData.isScoreLocked) tags.push("🔒점수불가"); 
                     
                     let statusLabel = tags.length > 0 ? tags.join(",") : "정상";
@@ -1801,6 +1815,7 @@
         }
 
         window.executeBulkToggleScoreLock = async function(shouldLock) {
+            if (!isUserSuperAdmin) return alert("최고관리자(Super Admin) 권한이 필요합니다.");
             const targetIds = getCheckedUserIds();
             if(targetIds.length === 0) return alert("점수 획득 불가 여부를 설정할 대상을 체크박스에서 선택해줘!");
             const stateLabel = shouldLock ? "불가" : "허용";
@@ -1814,6 +1829,7 @@
         };
 
         window.executeAdminBulkTimeBan = async function() {
+            if (!isUserSuperAdmin) return alert("최고관리자(Super Admin) 권한이 필요합니다.");
             const targetIds = getCheckedUserIds();
             const seconds = parseInt(document.getElementById('admBanSecondsInput').value);
             
@@ -1834,6 +1850,7 @@
         };
 
         window.executeAdminBulkPermBan = async function() {
+            if (!isUserSuperAdmin) return alert("최고관리자(Super Admin) 권한이 필요합니다.");
             const targetIds = getCheckedUserIds();
             if(targetIds.length === 0) return alert("영구 밴 조치할 대상들을 명단에서 체크해줘!");
 
@@ -1850,6 +1867,7 @@
         };
 
         window.executeAdminBulkUnban = async function() {
+            if (!isUserSuperAdmin) return alert("최고관리자(Super Admin) 권한이 필요합니다.");
             const targetIds = getCheckedUserIds();
             if(targetIds.length === 0) return alert("사면 면제 조치할 대상을 체크해줘!");
 
@@ -1866,6 +1884,7 @@
         };
 
         window.executeBulkToggleChatBan = async function(shouldBan) {
+            if (!isUserSuperAdmin) return alert("최고관리자(Super Admin) 권한이 필요합니다.");
             const targetIds = getCheckedUserIds();
             if(targetIds.length === 0) return alert("채팅 권한을 조율할 대상을 목록에서 체크해줘!");
             const stateLabel = shouldBan ? "금지" : "허용";
@@ -1879,6 +1898,7 @@
         };
 
         window.executeBulkDeleteUserAccounts = async function() {
+            if (!isUserSuperAdmin) return alert("최고관리자(Super Admin) 권한이 필요합니다.");
             const targetIds = getCheckedUserIds();
             if(targetIds.length === 0) return alert("DB 도큐먼트를 삭제해버릴 대상을 선택해줘!");
 
@@ -1893,6 +1913,7 @@
         };
 
         window.adjustUserStat = async function(statType, operation) {
+            if (!isUserSuperAdmin) return alert("최고관리자(Super Admin) 권한이 필요합니다.");
             const targetIds = getCheckedUserIds();
             const amount = parseFloat(document.getElementById('admAmountInput').value);
             
