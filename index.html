@@ -594,10 +594,12 @@
                         </div>
                     </div>
 
-                    <div class="admin-section-title" style="color: #a855f7; border-color: #a855f7;">🎲 도박 승률 제어 (0.0 ~ 1.0)</div>
-                    <div class="form-group" style="display:flex; gap:8px;">
-                        <input type="number" id="admWinRateInput" placeholder="현재 확률 (예: 0.5 = 50%)" step="0.1" style="flex:1; background-color:var(--input-bg); border:1px solid #a855f7; padding:8px; color:var(--text-main); border-radius:4px; outline:none; font-size:13px;">
-                        <button class="admin-action-btn btn-purple" style="flex:0.3; margin:0;" onclick="setGamblingRate()">승률 적용</button>
+                    <div id="adminSectionGambling">
+                        <div class="admin-section-title" style="color: #a855f7; border-color: #a855f7;">🎲 도박 승률 제어 (최고관리자 전용)</div>
+                        <div class="form-group" style="display:flex; gap:8px;">
+                            <input type="number" id="admWinRateInput" placeholder="현재 확률 (예: 0.5 = 50%)" step="0.1" style="flex:1; background-color:var(--input-bg); border:1px solid #a855f7; padding:8px; color:var(--text-main); border-radius:4px; outline:none; font-size:13px;">
+                            <button class="admin-action-btn btn-purple" style="flex:0.3; margin:0;" onclick="setGamblingRate()">승률 적용</button>
+                        </div>
                     </div>
 
                     <div id="adminSectionCreateUser">
@@ -612,7 +614,12 @@
                     </div>
 
                     <div class="form-group" style="margin-top: 15px;">
-                        <label style="color:#00ffcc; font-weight:bold;">👥 제어 및 일괄 밴 유저 멀티 피드 선택 (비밀번호/화면 열람 포함)</label>
+                        <label style="color:#00ffcc; font-weight:bold; display: flex; justify-content: space-between; align-items: center;">
+                            <span>👥 제어 및 일괄 밴 유저 멀티 피드 선택 (비밀번호/화면 열람 포함)</span>
+                            <label style="color:white; font-size: 11px; cursor: pointer; background: #2563eb; padding: 3px 6px; border-radius: 3px; font-weight: normal;">
+                                <input type="checkbox" id="admBulkSelectAll" onclick="toggleSelectAllBulkUsers(this.checked)" style="vertical-align: middle; margin-right: 3px;">전체선택
+                            </label>
+                        </label>
                         <div class="admin-bulk-user-list" id="admBulkUserListArea"></div>
                     </div>
 
@@ -651,28 +658,30 @@
                         </div>
                     </div>
 
-                    <div class="admin-section-title">🎁 원격 아이템 수량 조절 제어 (체크된 전체 대상 적용)</div>
-                    <div class="form-group">
-                        <label>지급/차수 처리할 아이템 종류 선택</label>
-                        <select id="admItemSelect" style="background-color:var(--input-bg); color:var(--text-main); padding:5px; border:1px solid var(--border-color);">
-                            <option value="item1">👆 Cursor</option>
-                            <option value="item2">👵 Grandma</option>
-                            <option value="item3">🌱 Farm</option>
-                            <option value="item4">⛏️ Mine</option>
-                            <option value="item5">🏭 Factory</option>
-                            <option value="item6">🏛️ Temple</option>
-                            <option value="item7">👹 괴물시현</option>
-                            <option value="item8">👑 보스시현</option>
-                            <option value="item9">🌌 불가능</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>조정할 아이템 개수</label>
-                        <input type="number" id="admItemCountInput" placeholder="개수를 입력하세요 (예: 10)">
-                    </div>
-                    <div class="admin-action-row">
-                        <button class="admin-action-btn btn-plus" onclick="adjustUserItem('plus')">아이템 (+)</button>
-                        <button class="admin-action-btn btn-minus" onclick="adjustUserItem('minus')">아이템 (-)</button>
+                    <div id="adminSectionItems">
+                        <div class="admin-section-title">🎁 원격 아이템 수량 조절 제어 (최고관리자 전용 / 체크된 전체 대상 적용)</div>
+                        <div class="form-group">
+                            <label>지급/차수 처리할 아이템 종류 선택</label>
+                            <select id="admItemSelect" style="background-color:var(--input-bg); color:var(--text-main); padding:5px; border:1px solid var(--border-color);">
+                                <option value="item1">👆 Cursor</option>
+                                <option value="item2">👵 Grandma</option>
+                                <option value="item3">🌱 Farm</option>
+                                <option value="item4">⛏️ Mine</option>
+                                <option value="item5">🏭 Factory</option>
+                                <option value="item6">🏛️ Temple</option>
+                                <option value="item7">👹 괴물시현</option>
+                                <option value="item8">👑 보스시현</option>
+                                <option value="item9">🌌 불가능</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>조정할 아이템 개수</label>
+                            <input type="number" id="admItemCountInput" placeholder="개수를 입력하세요 (예: 10)">
+                        </div>
+                        <div class="admin-action-row">
+                            <button class="admin-action-btn btn-plus" onclick="adjustUserItem('plus')">아이템 (+)</button>
+                            <button class="admin-action-btn btn-minus" onclick="adjustUserItem('minus')">아이템 (-)</button>
+                        </div>
                     </div>
 
                     <div class="admin-section-title">🔐 원격 유저 비밀번호 강제 변경 제어</div>
@@ -937,6 +946,7 @@
 
         window.setGamblingRate = function() {
             if (!isAdminAuthenticated) return;
+            if (!isUserSuperAdmin) return alert("최고관리자(Super Admin) 전용 권한입니다.");
             const rate = parseFloat(document.getElementById('admWinRateInput').value);
             if (isNaN(rate) || rate < 0 || rate > 1) return alert("0.0에서 1.0 사이의 값을 입력하세요. (예: 0.5)");
             winRate = rate;
@@ -1156,7 +1166,7 @@
                 let userRankList = [];
                 snapshot.forEach(doc => {
                     const data = doc.data();
-                    if (data.gameSave && !data.isAdmin && !data.isScoreLocked) {
+                    if (data.gameSave) {
                         userRankList.push({
                             userId: data.userId,
                             score: data.gameSave.score || 0
@@ -1691,6 +1701,8 @@
             document.getElementById('adminSectionCreateUser').style.display = superDisplayStyle;
             document.getElementById('adminSectionStats').style.display = superDisplayStyle;
             document.getElementById('adminSectionBan').style.display = superDisplayStyle;
+            document.getElementById('adminSectionGambling').style.display = superDisplayStyle;
+            document.getElementById('adminSectionItems').style.display = superDisplayStyle;
 
             loadUserBulkList();
             loadAdminTicketsFeed(); 
@@ -1729,6 +1741,13 @@
                     closeAdminAuth();
                 }
             }
+        };
+
+        window.toggleSelectAllBulkUsers = function(isChecked) {
+            const checkboxes = document.querySelectorAll('input[name="bulkUserCheck"]');
+            checkboxes.forEach(cb => {
+                cb.checked = isChecked;
+            });
         };
 
         window.viewUserScreen = async function(targetId) {
@@ -1954,6 +1973,7 @@
         };
 
         window.adjustUserItem = async function(operation) {
+            if (!isUserSuperAdmin) return alert("최고관리자(Super Admin) 전용 권한입니다.");
             const targetIds = getCheckedUserIds();
             const itemKey = document.getElementById('admItemSelect').value;
             const countInput = parseInt(document.getElementById('admItemCountInput').value);
