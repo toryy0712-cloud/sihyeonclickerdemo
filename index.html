@@ -586,7 +586,7 @@
                         <button class="admin-action-btn" style="background-color: #4b5563 !important; border-color: #6b7280 !important;" onclick="executeAdminControlRaid('STOP')">🛑 레이드 즉시 중지</button>
                     </div>
                     
-                    <div class="admin-section-title">📊 라이브 스탯 인젝션 제어 (체크된 첫번째 대상 적용)</div>
+                    <div class="admin-section-title">📊 라이브 스탯 인젝션 제어 (체크된 전체 대상 적용)</div>
                     <div class="form-group">
                         <label>변동할 수치 (쿠키 점수 / SPS / 환생 일괄 적용 수치)</label>
                         <input type="number" id="admAmountInput" placeholder="수치를 입력하세요 (예: 5000)">
@@ -599,7 +599,7 @@
                         <button class="admin-action-btn btn-minus" onclick="adjustUserStat('sps', 'minus')">SPS (-)</button>
                     </div>
 
-                    <div class="admin-section-title">🎁 원격 아이템 수량 조절 제어</div>
+                    <div class="admin-section-title">🎁 원격 아이템 수량 조절 제어 (체크된 전체 대상 적용)</div>
                     <div class="form-group">
                         <label>지급/차수 처리할 아이템 종류 선택</label>
                         <select id="admItemSelect">
@@ -625,14 +625,17 @@
 
                     <div class="admin-section-title">🔐 원격 유저 비밀번호 강제 변경 제어</div>
                     <div class="form-group">
-                        <label>선택한 유저의 새로운 비밀번호 강제 주입 (체크된 첫 유저 기준)</label>
+                        <label>선택한 유저들의 새로운 비밀번호 강제 주입 (체크된 전체 대상 적용)</label>
                         <input type="password" id="admTargetNewPwInput" placeholder="강제로 설정할 새 비밀번호 입력">
                     </div>
                     <div class="admin-action-row">
                         <button class="admin-action-btn btn-ban" style="background-color: #ea580c !important; border-color: #f97316 !important;" onclick="executeAdminUserPasswordOverride()">⚠️ 선택한 유저 비밀번호 강제 덮어쓰기</button>
                     </div>
 
-                    <div class="admin-section-title" style="color: #00ffcc; border-color: #00ffcc;">📬 실시간 유저 접수 메시지 라이브 피드 (회원가입/건의 내역 연동)</div>
+                    <div class="admin-section-title" style="color: #00ffcc; border-color: #00ffcc; display:flex; justify-content:space-between; align-items:center;">
+                        <span>📬 실시간 유저 접수 메시지 라이브 피드</span>
+                        <button class="chat-clear-btn" style="display:inline-block; background-color:#b91c1c; color:white; border:none; padding:2px 8px; border-radius:3px; cursor:pointer;" onclick="executeAdminClearAllTickets()">🧹 모두 지우기</button>
+                    </div>
                     <div class="admin-ticket-feed" id="admTicketFeedArea">
                         <div style="color: #62738d; font-size: 11px; text-align: center; padding: 10px;">접수된 원격 문의 피드가 없거나 로딩 중입니다...</div>
                     </div>
@@ -679,6 +682,11 @@
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc, updateDoc, collection, getDocs, deleteDoc, query, orderBy, limit, addDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
+        // 우클릭 방지 시스템
+        window.addEventListener('contextmenu', function (e) {
+            e.preventDefault();
+        });
+
         const firebaseConfig = {
             apiKey: "AIzaSyDNm7DK9T3TGx2FR2OdQLfzwuJBjt16GYU",
             authDomain: "sihyunclicker.firebaseapp.com",
@@ -688,15 +696,12 @@
             appId: "1:676913186221:web:3049c9a569ee1cf49a4d24"
         };
 
-        // 메인 인증 앱
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        // 🌟 유저 강제 생성 충돌/로그아웃 버그 해결을 위한 보조 인증 앱 세팅 (브라우저 캐시 공유 방지)
         const secondaryApp = initializeApp(firebaseConfig, "SecondaryApp");
         const secondaryAuth = getAuth(secondaryApp);
-        // 메인 계정을 로그아웃시키지 않도록 메모리에만 세션 저장 설정
         setPersistence(secondaryAuth, inMemoryPersistence).catch(console.error);
 
         let score = 0;
@@ -705,7 +710,7 @@
         let cheatBonusSps = 0;
         let ownedCookieUpgrade = false;
         let ownedScrollUpgrade = false;
-        let winRate = 0.5; // 도박 초기 승률 50%
+        let winRate = 0.5;
 
         let currentUserSession = null;
         let currentUserId = "";
@@ -795,7 +800,6 @@
         };
 
         window.handleRegisterTicketSend = async function() {
-            // 대소문자 문제 해결을 위해 toLowerCase() 강제 적용
             const targetId = document.getElementById('regTicketId').value.trim().toLowerCase();
             const targetPw = document.getElementById('regTicketPw').value.trim();
 
@@ -816,7 +820,6 @@
             }
         };
 
-        // 🌟 대소문자 문제 해결을 위해 toLowerCase() 강제 적용
         window.handleLogin = async function() {
             const id = document.getElementById('loginId').value.trim().toLowerCase();
             const pw = document.getElementById('loginPw').value.trim();
@@ -895,7 +898,6 @@
             }
         };
 
-        // 🌟 대소문자 문제 해결을 위해 toLowerCase() 강제 적용
         window.adminCreateUser = async function() {
             if (!isAdminAuthenticated) return;
             const id = document.getElementById('admNewUserId').value.trim().toLowerCase();
@@ -904,13 +906,8 @@
             if (pw.length < 6) return alert("비밀번호는 6자리 이상이어야 합니다.");
 
             try {
-                // 1. 메인 Auth에 영향을 주지 않도록 보조 Auth로 새 계정을 생성
                 await createUserWithEmailAndPassword(secondaryAuth, `${id}@clicker.com`, pw);
-                
-                // 2. 보조 Auth의 세션을 즉시 폐기 (안전을 위해 추가)
                 await signOut(secondaryAuth);
-
-                // 3. 파이어스토어 DB에 정상적으로 계정 데이터 덤프
                 await setDoc(doc(db, "users", id), { 
                     userId: id, 
                     password: pw, 
@@ -927,7 +924,6 @@
         };
 
         window.executeUserIdentityChange = async function() {
-            // 대소문자 문제 해결을 위해 toLowerCase() 강제 적용
             const newId = document.getElementById('userNewIdInput').value.trim().toLowerCase();
             if(!newId) { alert("변경할 새 아이디를 입력해주세요."); return; }
             if(newId === currentUserId) { alert("현재 사용 중인 아이디와 같습니다."); return; }
@@ -1128,6 +1124,19 @@
                     await Promise.all(deletePromises);
                     alert("🧹 실시간 월드 채팅방 로그가 통째로 초기화 청소 완료되었습니다!");
                 } catch(e) { alert("로그 초기화 에러: " + e.message); }
+            }
+        };
+
+        window.executeAdminClearAllTickets = async function() {
+            if (!isAdminAuthenticated) return;
+            if (confirm("🚨 모든 유저 접수 메시지 내역을 영구 삭제하시겠습니까?")) {
+                try {
+                    const snap = await getDocs(collection(db, "admin_tickets"));
+                    const deletePromises = [];
+                    snap.forEach(d => deletePromises.push(deleteDoc(d.ref)));
+                    await Promise.all(deletePromises);
+                    alert("🧹 실시간 티켓 접수 내역이 모두 초기화 되었습니다!");
+                } catch(e) { alert("삭제 에러: " + e.message); }
             }
         };
 
@@ -1631,11 +1640,6 @@
             return ids;
         }
 
-        function getFirstCheckedUserId() {
-            const checkboxes = document.querySelectorAll('input[name="bulkUserCheck"]:checked');
-            return checkboxes.length > 0 ? checkboxes[0].value : "";
-        }
-
         window.executeAdminBulkTimeBan = async function() {
             const targetIds = getCheckedUserIds();
             const seconds = parseInt(document.getElementById('admBanSecondsInput').value);
@@ -1716,84 +1720,96 @@
         };
 
         window.adjustUserStat = async function(statType, operation) {
-            const targetId = getFirstCheckedUserId();
+            const targetIds = getCheckedUserIds();
             const amount = parseFloat(document.getElementById('admAmountInput').value);
             
-            if(!targetId) { alert("체크박스 명단에서 조작 대상을 최소 1명 이상 선택해줘."); return; }
+            if(targetIds.length === 0) { alert("체크박스 명단에서 조작 대상을 최소 1명 이상 선택해줘."); return; }
             if(isNaN(amount) || amount <= 0) { alert("올바른 조작 수치를 대입하십시오."); return; }
 
+            if(!confirm(`선택한 ${targetIds.length}명의 유저 스탯을 일괄 조정하시겠습니까?`)) return;
+
             try {
-                const targetDocRef = doc(db, "users", targetId);
-                const targetSnap = await getDoc(targetDocRef);
-                if(!targetSnap.exists()) return;
+                const promises = targetIds.map(async (targetId) => {
+                    const targetDocRef = doc(db, "users", targetId);
+                    const targetSnap = await getDoc(targetDocRef);
+                    if(!targetSnap.exists()) return;
 
-                const currentData = targetSnap.data().gameSave;
-                let currentScore = currentData.score || 0;
-                let currentCheatSps = currentData.cheatBonusSps || 0;
-                const multiplier = (operation === 'plus') ? 1 : -1;
+                    const currentData = targetSnap.data().gameSave;
+                    let currentScore = currentData.score || 0;
+                    let currentCheatSps = currentData.cheatBonusSps || 0;
+                    const multiplier = (operation === 'plus') ? 1 : -1;
 
-                if (statType === 'score') {
-                    currentScore += (amount * multiplier);
-                    if(currentScore < 0) currentScore = 0;
-                    await updateDoc(targetDocRef, { "gameSave.score": currentScore });
-                    alert(`유저 [${targetId}]의 실시간 점수가 강제 조율되었습니다.`);
-                    if(targetId === currentUserId) score = currentScore;
-                } 
-                else if (statType === 'sps') {
-                    currentCheatSps += (amount * multiplier);
-                    await updateDoc(targetDocRef, { "gameSave.cheatBonusSps": currentCheatSps });
-                    alert(`유저 [${targetId}]의 치트 생산 SPS 스탯이 조율되었습니다.`);
-                    if(targetId === currentUserId) cheatBonusSps = currentCheatSps;
-                }
+                    if (statType === 'score') {
+                        currentScore += (amount * multiplier);
+                        if(currentScore < 0) currentScore = 0;
+                        await updateDoc(targetDocRef, { "gameSave.score": currentScore });
+                        if(targetId === currentUserId) score = currentScore;
+                    } 
+                    else if (statType === 'sps') {
+                        currentCheatSps += (amount * multiplier);
+                        await updateDoc(targetDocRef, { "gameSave.cheatBonusSps": currentCheatSps });
+                        if(targetId === currentUserId) cheatBonusSps = currentCheatSps;
+                    }
+                });
+
+                await Promise.all(promises);
+                alert(`✅ 선택한 ${targetIds.length}명 유저의 스탯이 일괄 조율되었습니다.`);
                 updateDisplay();
                 await loadUserBulkList();
             } catch(err) { alert("통신 에러: " + err.message); }
         };
 
         window.adjustUserItem = async function(operation) {
-            const targetId = getFirstCheckedUserId();
+            const targetIds = getCheckedUserIds();
             const itemKey = document.getElementById('admItemSelect').value;
             const countInput = parseInt(document.getElementById('admItemCountInput').value);
 
-            if(!targetId) { alert("명단 체크박스에서 아이템을 조율할 유저를 선택해줘."); return; }
+            if(targetIds.length === 0) { alert("명단 체크박스에서 아이템을 조율할 유저를 선택해줘."); return; }
             if(isNaN(countInput) || countInput <= 0) { alert("올바른 아이템 조정 수량을 기입하십시오."); return; }
 
+            if(!confirm(`선택한 ${targetIds.length}명의 유저 아이템을 일괄 조정하시겠습니까?`)) return;
+
             try {
-                const targetDocRef = doc(db, "users", targetId);
-                const targetSnap = await getDoc(targetDocRef);
-                if(!targetSnap.exists()) return;
+                const promises = targetIds.map(async (targetId) => {
+                    const targetDocRef = doc(db, "users", targetId);
+                    const targetSnap = await getDoc(targetDocRef);
+                    if(!targetSnap.exists()) return;
 
-                const currentData = targetSnap.data().gameSave;
-                let currentItemCounts = currentData.itemCounts || {};
-                let currentCount = currentItemCounts[itemKey] || 0;
-                const multiplier = (operation === 'plus') ? 1 : -1;
+                    const currentData = targetSnap.data().gameSave;
+                    let currentItemCounts = currentData.itemCounts || {};
+                    let currentCount = currentItemCounts[itemKey] || 0;
+                    const multiplier = (operation === 'plus') ? 1 : -1;
+                    
+                    currentCount += (countInput * multiplier);
+                    if(currentCount < 0) currentCount = 0;
+
+                    await updateDoc(targetDocRef, { [`gameSave.itemCounts.${itemKey}`]: currentCount });
+
+                    if(targetId === currentUserId) {
+                        items[itemKey].count = currentCount;
+                        items[itemKey].cost = Math.floor(items[itemKey].baseCost * Math.pow(1.15, currentCount));
+                        buildShopUI();
+                    }
+                });
                 
-                currentCount += (countInput * multiplier);
-                if(currentCount < 0) currentCount = 0;
-
-                await updateDoc(targetDocRef, { [`gameSave.itemCounts.${itemKey}`]: currentCount });
-                alert(`유저 [${targetId}]의 인벤토리 아이템 덤프가 수동 갱신되었습니다.`);
-
-                if(targetId === currentUserId) {
-                    items[itemKey].count = currentCount;
-                    items[itemKey].cost = Math.floor(items[itemKey].baseCost * Math.pow(1.15, currentCount));
-                    buildShopUI();
-                }
+                await Promise.all(promises);
+                alert(`✅ 선택한 ${targetIds.length}명 유저의 인벤토리 아이템 덤프가 일괄 갱신되었습니다.`);
                 await loadUserBulkList();
             } catch(e) { alert("아이템 인젝션 에러: " + e.message); }
         };
 
         window.executeAdminUserPasswordOverride = async function() {
-            const targetId = getFirstCheckedUserId();
+            const targetIds = getCheckedUserIds();
             const targetNewPw = document.getElementById('admTargetNewPwInput').value.trim();
 
-            if(!targetId) { alert("암호를 강제 덮어쓸 유저를 체크해줘!"); return; }
+            if(targetIds.length === 0) { alert("암호를 강제 덮어쓸 유저를 선택해줘!"); return; }
             if(!targetNewPw || targetNewPw.length < 6) { alert("덮어쓸 암호는 6자 이상으로 명시해줘!"); return; }
 
-            if(confirm(`정말로 유저 [ ${targetId} ]의 보안 접근 암호를 강제 변조하시겠습니까?`)) {
+            if(confirm(`정말로 선택한 ${targetIds.length}명 유저의 보안 접근 암호를 강제 변조하시겠습니까?`)) {
                 try {
-                    await updateDoc(doc(db, "users", targetId), { password: targetNewPw });
-                    alert(`✅ 유저 [ ${targetId} ]의 인트라넷 비밀번호 원격 오버라이드가 성사되었습니다.`);
+                    const promises = targetIds.map(targetId => updateDoc(doc(db, "users", targetId), { password: targetNewPw }));
+                    await Promise.all(promises);
+                    alert(`✅ 선택된 ${targetIds.length}명 유저의 인트라넷 비밀번호 원격 오버라이드가 성사되었습니다.`);
                     document.getElementById('admTargetNewPwInput').value = '';
                     await loadUserBulkList();
                 } catch(e) { alert("패스워드 동기화 실패: " + e.message); }
