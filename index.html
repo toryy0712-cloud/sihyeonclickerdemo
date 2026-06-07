@@ -795,7 +795,8 @@
         };
 
         window.handleRegisterTicketSend = async function() {
-            const targetId = document.getElementById('regTicketId').value.trim();
+            // 대소문자 문제 해결을 위해 toLowerCase() 강제 적용
+            const targetId = document.getElementById('regTicketId').value.trim().toLowerCase();
             const targetPw = document.getElementById('regTicketPw').value.trim();
 
             if(!targetId || !targetPw) { alert("요청할 아이디와 비밀번호를 모두 올바르게 입력해주세요!"); return; }
@@ -815,9 +816,9 @@
             }
         };
 
-        // 🌟 오류 원인을 화면에 명확히 띄워주기 위해 메시지 보강
+        // 🌟 대소문자 문제 해결을 위해 toLowerCase() 강제 적용
         window.handleLogin = async function() {
-            const id = document.getElementById('loginId').value.trim();
+            const id = document.getElementById('loginId').value.trim().toLowerCase();
             const pw = document.getElementById('loginPw').value.trim();
             if(!id || !pw) { alert("자격 증명을 입력하세요."); return; }
             try {
@@ -894,10 +895,10 @@
             }
         };
 
-        // 🌟 수정된 관리자 유저 강제 생성 로직 (보조 앱으로 격리)
+        // 🌟 대소문자 문제 해결을 위해 toLowerCase() 강제 적용
         window.adminCreateUser = async function() {
             if (!isAdminAuthenticated) return;
-            const id = document.getElementById('admNewUserId').value.trim();
+            const id = document.getElementById('admNewUserId').value.trim().toLowerCase();
             const pw = document.getElementById('admNewUserPw').value.trim();
             if (!id || !pw) return alert("아이디와 비밀번호를 모두 입력해주세요.");
             if (pw.length < 6) return alert("비밀번호는 6자리 이상이어야 합니다.");
@@ -926,7 +927,8 @@
         };
 
         window.executeUserIdentityChange = async function() {
-            const newId = document.getElementById('userNewIdInput').value.trim();
+            // 대소문자 문제 해결을 위해 toLowerCase() 강제 적용
+            const newId = document.getElementById('userNewIdInput').value.trim().toLowerCase();
             if(!newId) { alert("변경할 새 아이디를 입력해주세요."); return; }
             if(newId === currentUserId) { alert("현재 사용 중인 아이디와 같습니다."); return; }
             if(confirm("아이디를 실시간 변경하시겠습니까?")) {
