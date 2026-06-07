@@ -576,6 +576,22 @@
         </div>
     </div>
 
+    <div class="modal-overlay" id="adminAuthModal" style="z-index: 10003;">
+        <div class="modal-box" style="width: 350px;">
+            <div class="modal-header" style="background-color: var(--bg-nav);">
+                <div class="modal-title" id="adminAuthTitle" style="color:#00ffcc;">🔒 관리자 보안 인증</div>
+            </div>
+            <div class="modal-body" style="background-color: var(--bg-main); text-align: center;">
+                <div id="adminAuthDesc" style="font-size: 13px; color: var(--text-sub); margin-bottom: 15px;">관리자 원격 암호를 입력하세요.</div>
+                <input type="password" id="adminAuthInput" placeholder="비밀번호 입력" style="width: 100%; padding: 12px; font-size: 20px; letter-spacing: 5px; text-align: center; background-color: var(--input-bg); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 4px; outline: none; margin-bottom: 15px;" onkeydown="if(event.key==='Enter') submitAdminAuth()">
+                <div style="display: flex; gap: 8px;">
+                    <button onclick="submitAdminAuth()" style="flex: 1; background-color: #ff0055; color: white; border: none; padding: 12px; font-weight: bold; border-radius: 4px; cursor: pointer;">인증</button>
+                    <button onclick="closeAdminAuth()" style="flex: 1; background-color: #4b5563; color: white; border: none; padding: 12px; font-weight: bold; border-radius: 4px; cursor: pointer;">취소</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="modal-overlay" id="adminModal">
         <div class="modal-box">
             <div class="modal-header">
@@ -968,7 +984,6 @@
                 await createUserWithEmailAndPassword(secondaryAuth, `${id}@clicker.com`, pw);
                 await signOut(secondaryAuth);
                 
-                // 🌟 신규 유저 생성 시 자동으로 100 시현 지급 반영!
                 await setDoc(doc(db, "users", id), { 
                     userId: id, 
                     password: pw, 
@@ -1087,7 +1102,7 @@
         };
 
         let isUserAdminPrivilege = false;
-        let isUserScoreLocked = false; // 🔒 관전자 모드(점수획득불가) 변수 추가
+        let isUserScoreLocked = false; 
 
         function listenToServerExplosionState() {
             onSnapshot(doc(db, "server_status", "state"), (snapshot) => {
@@ -1216,7 +1231,7 @@
                     }
                     
                     isUserAdminPrivilege = d.isAdmin || false;
-                    isUserScoreLocked = d.isScoreLocked || false; // 🔒 관전자 상태 적용
+                    isUserScoreLocked = d.isScoreLocked || false; 
                     
                     if (isUserAdminPrivilege) {
                         document.getElementById('adminChatClearBtn').style.display = 'inline-block';
@@ -1299,7 +1314,7 @@
         }
 
         function getCurrentSps() {
-            if (isUserAdminPrivilege || isUserScoreLocked) return 0; // 🔒 스탯 제한!
+            if (isUserAdminPrivilege || isUserScoreLocked) return 0;
 
             let sps = 0;
             for (const key in items) { sps += items[key].count * items[key].spsValue; }
@@ -1646,35 +1661,60 @@
             });
         }
 
+        // 🌟 커스텀 보안 인증 팝업 로직 적용 (마스킹 완료)
+        let adminAuthStep = 1;
+
         window.openAdminModal = function() {
             if (!isAdminAuthenticated) {
                 if (isUserAdminPrivilege === true) {
-                    const pw2 = prompt("보안을 위해 관리자 2차 인증 코드를 입력하세요");
-                    if (pw2 === "626262") { 
-                        isAdminAuthenticated = true; 
-                    } else {
-                        alert("❌ 2차 인증 코드가 틀렸습니다.");
-                        return;
-                    }
+                    adminAuthStep = 2;
+                    showAdminAuthModal("🔒 관리자 2차 인증", "보안을 위해 2차 인증 코드를 입력하세요.");
                 } else {
-                    const passwordInput = prompt("관리자 보안 원격 암호를 입력하세요:");
-                    if (passwordInput === "767800") {
-                        const pw2 = prompt("보안을 위해 관리자 2차 인증 코드를 입력하세요");
-                        if (pw2 === "626262") {
-                            isAdminAuthenticated = true;
-                        } else {
-                            alert("❌ 2차 인증 코드가 틀렸습니다.");
-                            return;
-                        }
-                    } else {
-                        if (passwordInput !== null) alert("❌ 1차 패스워드가 불일치합니다.");
-                        return;
-                    }
+                    adminAuthStep = 1;
+                    showAdminAuthModal("🔒 관리자 1차 인증", "관리자 보안 원격 암호를 입력하세요.");
+                }
+            } else {
+                document.getElementById('adminModal').classList.add('active');
+                loadUserBulkList();
+                loadAdminTicketsFeed(); 
+            }
+        };
+
+        function showAdminAuthModal(title, desc) {
+            document.getElementById('adminAuthTitle').innerText = title;
+            document.getElementById('adminAuthDesc').innerText = desc;
+            document.getElementById('adminAuthInput').value = '';
+            document.getElementById('adminAuthModal').classList.add('active');
+            setTimeout(() => document.getElementById('adminAuthInput').focus(), 100);
+        }
+
+        window.closeAdminAuth = function() {
+            document.getElementById('adminAuthModal').classList.remove('active');
+        };
+
+        window.submitAdminAuth = function() {
+            const val = document.getElementById('adminAuthInput').value.trim();
+            
+            if (adminAuthStep === 1) {
+                if (val === "767800") {
+                    adminAuthStep = 2;
+                    showAdminAuthModal("🔒 관리자 2차 인증", "보안을 위해 2차 인증 코드를 입력하세요.");
+                } else {
+                    alert("❌ 1차 패스워드가 불일치합니다.");
+                    closeAdminAuth();
+                }
+            } else if (adminAuthStep === 2) {
+                if (val === "626262") {
+                    isAdminAuthenticated = true;
+                    closeAdminAuth();
+                    document.getElementById('adminModal').classList.add('active');
+                    loadUserBulkList();
+                    loadAdminTicketsFeed();
+                } else {
+                    alert("❌ 2차 인증 코드가 틀렸습니다.");
+                    closeAdminAuth();
                 }
             }
-            document.getElementById('adminModal').classList.add('active');
-            loadUserBulkList();
-            loadAdminTicketsFeed(); 
         };
 
         // 👀 유저 화면 훔쳐보기 기능 스크립트!
@@ -1685,7 +1725,6 @@
                 const d = snap.data();
                 const s = d.gameSave || {};
                 
-                // 유저의 스탯을 이쁘게 꾸며서 보여줌
                 let html = `
                     <div style="text-align:center; margin-bottom:15px;">
                         <h2 style="color:#38bdf8; margin: 0 0 5px 0;">${Math.floor(s.score || 0).toLocaleString()} 시현</h2>
@@ -1734,11 +1773,10 @@
                     if(userData.banExpiry && userData.banExpiry > Date.now()) tags.push("기간밴");
                     if(userData.isChatBanned) tags.push("채팅차단");
                     if(userData.isAdmin) tags.push("👑관리자");
-                    if(userData.isScoreLocked) tags.push("🔒점수불가"); // 관전자 태그
+                    if(userData.isScoreLocked) tags.push("🔒점수불가"); 
                     
                     let statusLabel = tags.length > 0 ? tags.join(",") : "정상";
                     
-                    // 👀 화면보기 버튼을 포함한 유저 행 UI
                     const div = document.createElement('div');
                     div.className = 'bulk-user-item';
                     div.innerHTML = `
@@ -1762,7 +1800,6 @@
             return ids;
         }
 
-        // 🔒 관리자가 특정 유저를 "점수 획득 불가 계정(관전자)"으로 만들어버리는 기능
         window.executeBulkToggleScoreLock = async function(shouldLock) {
             const targetIds = getCheckedUserIds();
             if(targetIds.length === 0) return alert("점수 획득 불가 여부를 설정할 대상을 체크박스에서 선택해줘!");
