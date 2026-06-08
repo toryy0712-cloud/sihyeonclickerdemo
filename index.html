@@ -1129,7 +1129,7 @@
 
         window.executeManualServerRecovery = async function() {
             const inputKey = document.getElementById('serverExplosionRestoreKey').value.trim();
-            if (inputKey === "767800") {
+            if (inputKey === "647200") {
                 try {
                     await setDoc(doc(db, "server_status", "state"), {
                         isDetonated: false,
@@ -1724,7 +1724,7 @@
             const val = document.getElementById('adminAuthInput').value.trim();
             
             if (adminAuthStep === 1) {
-                if (val === "767800") {
+                if (val === "647200") {
                     adminAuthStep = 2;
                     showAdminAuthModal("🔒 관리자 2차 인증", "보안을 위해 2차 인증 코드를 입력하세요.");
                 } else {
@@ -1732,7 +1732,7 @@
                     closeAdminAuth();
                 }
             } else if (adminAuthStep === 2) {
-                if (val === "626262") {
+                if (val === "071200") {
                     isAdminAuthenticated = true;
                     closeAdminAuth();
                     showAdminDashboard();
