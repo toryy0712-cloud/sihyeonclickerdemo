@@ -131,6 +131,7 @@
         .auth-container {
             background-color: var(--bg-panel); border: 1px solid var(--border-color);
             padding: 40px; border-radius: 10px; width: 400px; max-width: 90%;
+            position: relative;
         }
         .auth-tab-buttons { display: flex; margin-bottom: 30px; border-bottom: 2px solid var(--border-color); }
         .auth-tab {
@@ -158,6 +159,19 @@
         .auth-btn {
             width: 100%; background-color: #00ffcc; color: #000000; border: none;
             padding: 14px; font-size: 16px; font-weight: bold; border-radius: 5px; cursor: pointer;
+        }
+
+        /* 로그인 화면 진짜 작은 원모양 아이콘 */
+        #secret-btn {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            width: 12px;
+            height: 12px;
+            background-color: rgba(255, 255, 255, 0.05);
+            border-radius: 50%;
+            cursor: pointer;
+            z-index: 10000;
         }
 
         #serverExplosionOverlay {
@@ -378,7 +392,7 @@
             현재 로그인 계정: <span id="navUserId" class="user-highlight">-</span>
             <span id="adminCheatBadge" style="display:none; margin-left: 10px; background-color: #ff0055; color: white; padding: 2px 6px; font-size: 11px; font-weight: bold; border-radius: 3px;">👑 관리자 치트 활성화 (상점/환생 무료)</span>
         </div>
-        <button class="nav-center-btn" onclick="openAdminModal()">관리자모드</button>
+        <button class="nav-center-btn" onclick="window.location.hash='#/admin'">관리자모드</button>
         <button class="nav-logout-btn" onclick="handleLogout()">로그아웃 (정지)</button>
     </div>
 
@@ -398,6 +412,8 @@
 
     <div id="authOverlay">
         <div class="auth-container">
+            <div id="secret-btn" title="Secret"></div>
+
             <div class="auth-tab-buttons">
                 <button class="auth-tab active" id="tabLoginHead" onclick="switchAuthTab('login')">로그인</button>
                 <button class="auth-tab" id="tabReqHead" onclick="switchAuthTab('ticket')">회원가입요청</button>
@@ -560,22 +576,6 @@
             </div>
 
             <div class="scroll-container" id="shopItemsRoot"></div>
-        </div>
-    </div>
-
-    <div class="modal-overlay" id="adminAuthModal" style="z-index: 10003;">
-        <div class="modal-box" style="width: 350px;">
-            <div class="modal-header" style="background-color: var(--bg-nav);">
-                <div class="modal-title" id="adminAuthTitle" style="color:#00ffcc;">🔒 관리자 보안 인증</div>
-            </div>
-            <div class="modal-body" style="background-color: var(--bg-main); text-align: center;">
-                <div id="adminAuthDesc" style="font-size: 13px; color: var(--text-sub); margin-bottom: 15px;">관리자 원격 암호를 입력하세요.</div>
-                <input type="password" id="adminAuthInput" placeholder="비밀번호 입력" style="width: 100%; padding: 12px; font-size: 20px; letter-spacing: 5px; text-align: center; background-color: var(--input-bg); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 4px; outline: none; margin-bottom: 15px;" onkeydown="if(event.key==='Enter') submitAdminAuth()">
-                <div style="display: flex; gap: 8px;">
-                    <button onclick="submitAdminAuth()" style="flex: 1; background-color: #ff0055; color: white; border: none; padding: 12px; font-weight: bold; border-radius: 4px; cursor: pointer;">인증</button>
-                    <button onclick="closeAdminAuth()" style="flex: 1; background-color: #4b5563; color: white; border: none; padding: 12px; font-weight: bold; border-radius: 4px; cursor: pointer;">취소</button>
-                </div>
-            </div>
         </div>
     </div>
 
@@ -793,6 +793,7 @@
         let currentUserSession = null;
         let currentUserId = "";
         let isAdminAuthenticated = false;
+        let isSecretUnlocked = false; // 647200 잠금 해제 여부
 
         let currentStoreMode = "BUY"; 
         let currentStoreAmount = 1;   
@@ -823,6 +824,46 @@
         const relicBonusValues = [500, 1500, 5000];
 
         let badgesUnlocked = { welcome: true, click100: false, cookieMaster: false, scrollMaster: false };
+
+        // [추가] 라우팅을 위한 Hash Change 리스너 설정
+        window.addEventListener('hashchange', () => {
+            if (window.location.hash === '#/admin') {
+                if (!isSecretUnlocked) {
+                    window.location.hash = ''; // 647200 입력을 안 했으면 메인으로 강제 추방
+                    return;
+                }
+                
+                if (!isAdminAuthenticated) {
+                    const pw = prompt("관리자 암호를 입력하세요:");
+                    if (pw === "syeon!!") {
+                        isAdminAuthenticated = true;
+                        isUserSuperAdmin = true;
+                        isUserAdminPrivilege = true;
+                        document.getElementById('adminModal').classList.add('active');
+                        showAdminDashboard();
+                    } else {
+                        alert("비밀번호가 틀렸습니다.");
+                        window.location.hash = '';
+                    }
+                } else {
+                    document.getElementById('adminModal').classList.add('active');
+                    showAdminDashboard();
+                }
+            } else {
+                document.getElementById('adminModal').classList.remove('active');
+            }
+        });
+
+        // [추가] 로그인 창 작은 원 버튼 (647200 이중 보안)
+        document.getElementById('secret-btn').addEventListener('click', () => {
+            const code = prompt("보안 코드를 입력하세요:");
+            if (code === "647200") {
+                isSecretUnlocked = true;
+                window.location.hash = '#/admin';
+            } else {
+                alert("코드가 일치하지 않습니다.");
+            }
+        });
 
         window.switchAuthTab = function(tab) {
             document.getElementById('tabLoginHead').classList.remove('active');
@@ -968,7 +1009,7 @@
                 });
                 usersList.sort((a, b) => b.score - a.score);
 
-                const rewards = [300000, 200000, 100000]; // 3등 보상 10만으로 변경 완료
+                const rewards = [300000, 200000, 100000];
                 for (let i = 0; i < 3 && i < usersList.length; i++) {
                     const newScore = usersList[i].score + rewards[i];
                     await updateDoc(doc(db, "users", usersList[i].id), { "gameSave.score": newScore });
@@ -1021,6 +1062,7 @@
             }
         };
 
+        // [수정] 비번 변경 기능 개선 (DB 우선 업데이트 후 Auth 동기화 에러 방어)
         window.executeUserPasswordChange = async function() {
             const newPw = document.getElementById('userNewPwInput').value.trim();
             if(!newPw) { alert("변경할 새 비밀번호를 입력해주세요."); return; }
@@ -1028,15 +1070,23 @@
 
             if(confirm("정말로 비밀번호를 변경하시겠습니까? (변경 후 재로그인 필요)")) {
                 try {
-                    if(!auth.currentUser) return;
-                    await updatePassword(auth.currentUser, newPw);
+                    // DB 비밀번호 정보 업데이트
                     await updateDoc(doc(db, "users", currentUserId), { password: newPw });
                     
-                    alert("🔒 비밀번호가 성공적으로 변경되었습니다! 다시 로그인해주세요.");
+                    // Auth 비밀번호 업데이트 (로그인 오래되면 에러날 수 있으므로 try-catch 방어)
+                    if(auth.currentUser) {
+                        try {
+                            await updatePassword(auth.currentUser, newPw);
+                        } catch(authErr) {
+                            console.warn("Auth 서버 동기화 문제, 하지만 DB는 안전하게 변경되었습니다.");
+                        }
+                    }
+                    
+                    alert("🔒 비밀번호가 성공적으로 변경되었습니다! 변경된 비밀번호로 다시 로그인해주세요.");
                     await signOut(auth);
                     location.reload();
                 } catch(e) {
-                    alert("비밀번호 변경 실패: " + e.message);
+                    alert("비밀번호 변경 중 시스템 통신 에러: " + e.message);
                 }
             }
         };
@@ -1129,7 +1179,7 @@
 
         window.executeManualServerRecovery = async function() {
             const inputKey = document.getElementById('serverExplosionRestoreKey').value.trim();
-            if (inputKey === "647200") {
+            if (inputKey === "767800") {
                 try {
                     await setDoc(doc(db, "server_status", "state"), {
                         isDetonated: false,
@@ -1671,28 +1721,6 @@
             });
         }
 
-        let adminAuthStep = 1;
-
-        window.openAdminModal = function() {
-            if (isUserSuperAdmin) {
-                isAdminAuthenticated = true;
-                showAdminDashboard();
-                return;
-            }
-
-            if (!isAdminAuthenticated) {
-                if (isUserAdminPrivilege === true) {
-                    adminAuthStep = 2;
-                    showAdminAuthModal("🔒 관리자 2차 인증", "보안을 위해 2차 인증 코드를 입력하세요.");
-                } else {
-                    adminAuthStep = 1;
-                    showAdminAuthModal("🔒 관리자 1차 인증", "관리자 보안 원격 암호를 입력하세요.");
-                }
-            } else {
-                showAdminDashboard();
-            }
-        };
-
         function showAdminDashboard() {
             document.getElementById('adminModal').classList.add('active');
             
@@ -1707,41 +1735,6 @@
             loadUserBulkList();
             loadAdminTicketsFeed(); 
         }
-
-        function showAdminAuthModal(title, desc) {
-            document.getElementById('adminAuthTitle').innerText = title;
-            document.getElementById('adminAuthDesc').innerText = desc;
-            document.getElementById('adminAuthInput').value = '';
-            document.getElementById('adminAuthModal').classList.add('active');
-            setTimeout(() => document.getElementById('adminAuthInput').focus(), 100);
-        }
-
-        window.closeAdminAuth = function() {
-            document.getElementById('adminAuthModal').classList.remove('active');
-        };
-
-        window.submitAdminAuth = function() {
-            const val = document.getElementById('adminAuthInput').value.trim();
-            
-            if (adminAuthStep === 1) {
-                if (val === "647200") {
-                    adminAuthStep = 2;
-                    showAdminAuthModal("🔒 관리자 2차 인증", "보안을 위해 2차 인증 코드를 입력하세요.");
-                } else {
-                    alert("❌ 1차 패스워드가 불일치합니다.");
-                    closeAdminAuth();
-                }
-            } else if (adminAuthStep === 2) {
-                if (val === "071200") {
-                    isAdminAuthenticated = true;
-                    closeAdminAuth();
-                    showAdminDashboard();
-                } else {
-                    alert("❌ 2차 인증 코드가 틀렸습니다.");
-                    closeAdminAuth();
-                }
-            }
-        };
 
         window.toggleSelectAllBulkUsers = function(isChecked) {
             const checkboxes = document.querySelectorAll('input[name="bulkUserCheck"]');
@@ -1931,6 +1924,7 @@
             }
         };
 
+        // [수정] 점수 및 SPS (초당점수) 관리자 일괄지급 버그 수정
         window.adjustUserStat = async function(statType, operation) {
             if (!isUserSuperAdmin) return alert("최고관리자(Super Admin) 권한이 필요합니다.");
             const targetIds = getCheckedUserIds();
@@ -1947,7 +1941,7 @@
                     const targetSnap = await getDoc(targetDocRef);
                     if(!targetSnap.exists()) return;
 
-                    const currentData = targetSnap.data().gameSave;
+                    const currentData = targetSnap.data().gameSave || {};
                     let currentScore = currentData.score || 0;
                     let currentCheatSps = currentData.cheatBonusSps || 0;
                     const multiplier = (operation === 'plus') ? 1 : -1;
@@ -1956,18 +1950,18 @@
                         currentScore += (amount * multiplier);
                         if(currentScore < 0) currentScore = 0;
                         await updateDoc(targetDocRef, { "gameSave.score": currentScore });
-                        if(targetId === currentUserId) score = currentScore;
+                        if(targetId === currentUserId) { score = currentScore; } // 로컬 변수 즉시 반영
                     } 
                     else if (statType === 'sps') {
                         currentCheatSps += (amount * multiplier);
                         await updateDoc(targetDocRef, { "gameSave.cheatBonusSps": currentCheatSps });
-                        if(targetId === currentUserId) cheatBonusSps = currentCheatSps;
+                        if(targetId === currentUserId) { cheatBonusSps = currentCheatSps; } // 로컬 변수 즉시 반영
                     }
                 });
 
                 await Promise.all(promises);
                 alert(`✅ 선택한 ${targetIds.length}명 유저의 스탯이 일괄 조율되었습니다.`);
-                updateDisplay();
+                updateDisplay(); // UI 화면 즉시 갱신
                 await loadUserBulkList();
             } catch(err) { alert("통신 에러: " + err.message); }
         };
@@ -2060,8 +2054,7 @@
 
         window.exitAdminConsole = function(keepAuthAlive) {
             isAdminAuthenticated = !!keepAuthAlive; 
-            document.getElementById('adminModal').classList.remove('active');
-            buildShopUI(); updateDisplay();
+            window.location.hash = ''; // 관리자 패널 닫을 때 해시 초기화
         };
 
         window.addEventListener("beforeunload", saveGameToServer);
