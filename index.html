@@ -730,7 +730,7 @@
                             <button class="admin-action-btn btn-unban" onclick="executeBulkToggleScoreLock(false)">🔓 일괄 점수획득 허용</button>
                         </div>
 
-                        <button class="admin-btn-danger" onclick="executeBulkDeleteUserAccounts()">❌ 선택한 유저 무리 일괄 DB에서 영구 삭제</button>
+                        <button class="admin-btn-danger" onclick="executeBulkDeleteUserAccounts()">❌ 선택한 유저 데이터 일괄 영구 삭제 (계정 파쇄)</button>
                     </div>
 
                     <div class="admin-section-title" style="color: #00ffcc; border-color: #00ffcc; display:flex; justify-content:space-between; align-items:center;">
@@ -802,7 +802,8 @@
             setPersistence, 
             inMemoryPersistence,
             EmailAuthProvider,
-            reauthenticateWithCredential
+            reauthenticateWithCredential,
+            deleteUser
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc, updateDoc, collection, getDocs, deleteDoc, query, orderBy, limit, addDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
@@ -1023,6 +1024,7 @@
             }
         };
 
+        // 🚨 유저 생성 로직 에러 핸들링 보완 🚨
         window.adminCreateUser = async function() {
             if (!isAdminAuthenticated) return;
             if (!isUserSuperAdmin) return alert("최고관리자(Super Admin) 전용 권한입니다.");
@@ -1047,7 +1049,11 @@
                 document.getElementById('admNewUserPw').value = '';
                 await loadUserBulkList();
             } catch (e) {
-                alert("유저 생성 실패 (이미 존재하는 아이디이거나 오류가 발생했습니다): " + e.message);
+                if (e.code === 'auth/email-already-in-use') {
+                    alert(`❌ 유저 생성 실패: [${id}] 계정은 이미 시스템(Auth)에 가입되어 있는 아이디입니다!\n\n(과거에 DB 데이터만 지워지고 실제 인증 서버에서는 계정이 파기되지 않은 유령 계정일 수 있습니다. 다른 아이디로 생성해주세요.)`);
+                } else {
+                    alert("유저 생성 실패: " + e.message);
+                }
             }
         };
 
@@ -1065,7 +1071,6 @@
             }
         };
 
-        // 🚨 유저가 직접 비밀번호 변경하는 기능 보완 🚨
         window.executeUserPasswordChange = async function() {
             const newPw = document.getElementById('userNewPwInput').value.trim();
             if(!newPw) { alert("변경할 새 비밀번호를 입력해주세요."); return; }
@@ -1075,8 +1080,6 @@
                 try {
                     if(!auth.currentUser) return;
                     
-                    // 1. DB에 저장되어 있는 기존 비밀번호를 가져와서 백그라운드 재인증(로그인)을 먼저 거침.
-                    // 이렇게 하면 "최근에 로그인한 적이 있어야 비번을 바꿀 수 있다"는 보안 에러를 피할 수 있어.
                     const userSnap = await getDoc(doc(db, "users", currentUserId));
                     if(userSnap.exists()) {
                         const currentPw = userSnap.data().password;
@@ -1086,10 +1089,7 @@
                         }
                     }
 
-                    // 2. 실제 Firebase 로그인 서버(Auth) 비밀번호 업데이트 시도
                     await updatePassword(auth.currentUser, newPw);
-                    
-                    // 3. 실제 서버 업데이트가 성공했을 때만 DB(Firestore) 업데이트 진행!!
                     await updateDoc(doc(db, "users", currentUserId), { password: newPw });
                     
                     alert("🔒 비밀번호가 성공적으로 변경되었습니다! 다시 로그인해주세요.");
@@ -1297,19 +1297,16 @@
                 currentUserSession = user;
                 currentUserId = user.email.split('@')[0];
                 
-                // 해당 유저의 실시간 변경 감지 리스너 연결 (새로고침, 정지 즉각 반영)
                 onSnapshot(doc(db, "users", currentUserId), (docSnap) => {
                     if (docSnap.exists()) {
                         const d = docSnap.data();
                         
-                        // 밴 체크
                         if(d.isPermanentBan || (d.banExpiry && d.banExpiry > Date.now())) { 
                             alert("🔴 계정이 정지 처리되어 추방됩니다.");
                             signOut(auth).then(() => location.reload());
                             return; 
                         }
 
-                        // 관리자 강제 조작 변경 시 즉시 동기화(새로고침)
                         if (d.adminUpdateTrigger) {
                             if (localAdminTrigger === null) {
                                 localAdminTrigger = d.adminUpdateTrigger;
@@ -1327,7 +1324,6 @@
                             document.getElementById('adminChatClearBtn').style.display = 'inline-block';
                         }
 
-                        // 초기 로드 시 변수 바인딩
                         if (localAdminTrigger === d.adminUpdateTrigger || localAdminTrigger === null) {
                             const s = d.gameSave || {};
                             score = (isUserAdminPrivilege || isUserScoreLocked) ? 0 : (Number(s.score) || 0); 
@@ -2000,16 +1996,49 @@
             } catch(e) { alert("권한 인젝션 실패: " + e.message); }
         };
 
+        // 🚨 DB와 실제 인증 서버 데이터 완전 영구 삭제 로직 보완 🚨
         window.executeBulkDeleteUserAccounts = async function() {
             if (!isUserSuperAdmin) return alert("최고관리자(Super Admin) 권한이 필요합니다.");
             const targetIds = getCheckedUserIds();
             if(targetIds.length === 0) return alert("DB 도큐먼트를 삭제해버릴 대상을 선택해줘!");
 
-            if(confirm(`🔥 [크리티컬 경고] 선택된 ${targetIds.length}명의 데이터 구조 자체를 영구 파쇄 소멸시키겠습니까?`)) {
+            if(confirm(`🔥 [크리티컬 경고] 선택된 ${targetIds.length}명의 데이터를 영구 삭제하시겠습니까?\n(껍데기(DB) 뿐만 아니라 실제 인증 서버 계정 파기도 시도합니다)`)) {
+                let successCount = 0;
+                let authFailCount = 0;
+                
                 try {
-                    const promises = targetIds.map(id => deleteDoc(doc(db, "users", id)));
+                    const promises = targetIds.map(async (targetId) => {
+                        const targetDocRef = doc(db, "users", targetId);
+                        const targetSnap = await getDoc(targetDocRef);
+                        
+                        if(targetSnap.exists()) {
+                            const oldPw = targetSnap.data().password;
+                            
+                            if(oldPw) {
+                                try {
+                                    // 1. 유저의 원래 비밀번호로 로그인하여 실제 인증 서버(Auth)에 접속
+                                    const userCredential = await signInWithEmailAndPassword(secondaryAuth, `${targetId}@clicker.com`, oldPw);
+                                    
+                                    // 2. 인증 서버에 기록된 계정 정보 완전히 삭제 (가장 중요)
+                                    await deleteUser(userCredential.user);
+                                } catch(authErr) {
+                                    console.warn(`Auth 삭제 실패 (${targetId}) - 기존 비밀번호 불일치 등으로 인증 서버 계정은 남을 수 있음`, authErr);
+                                    authFailCount++;
+                                }
+                            }
+                            
+                            // 3. DB 데이터 파기
+                            await deleteDoc(targetDocRef);
+                            successCount++;
+                        }
+                    });
+                    
                     await Promise.all(promises);
-                    alert(`🔥 [일괄 삭제 소멸] 유저 테이블 ${targetIds.length}건이 데이터 레이어에서 영구 소멸했습니다.`);
+                    
+                    let alertMsg = `🔥 [일괄 파쇄 완료] 유저 ${successCount}건의 데이터 구조가 영구 소멸했습니다.`;
+                    if(authFailCount > 0) alertMsg += `\n⚠️ (주의: 비밀번호가 맞지 않아 실제 인증서버에서는 지우지 못한 계정이 ${authFailCount}건 있습니다. 이 아이디들은 재가입이 막혀있습니다.)`;
+                    
+                    alert(alertMsg);
                     await loadUserBulkList();
                 } catch(e) { alert("파쇄 연동 에러: " + e.message); }
             }
@@ -2105,7 +2134,6 @@
             } catch(e) { alert("아이템 인젝션 에러: " + e.message); }
         };
 
-        // 🚨 관리자가 타 유저 강제 비밀번호 변경하는 기능 보완 🚨
         window.executeAdminUserPasswordOverride = async function() {
             if (!isUserSuperAdmin) return alert("최고관리자 권한이 필요합니다.");
             const targetIds = getCheckedUserIds();
@@ -2128,17 +2156,15 @@
                         
                         if (oldPw) {
                             try {
-                                // 기존 비밀번호로 한 번 로그인(인증)을 거쳐야만 비밀번호를 바꿀 수 있음.
                                 const userCredential = await signInWithEmailAndPassword(secondaryAuth, `${targetId}@clicker.com`, oldPw);
                                 await updatePassword(userCredential.user, targetNewPw);
                                 await signOut(secondaryAuth);
-                                authChanged = true; // 여기까지 도달해야만 진짜 바뀐 것!
+                                authChanged = true;
                             } catch (authErr) {
                                 console.warn(`Auth PW 변경 실패 (${targetId}): 이미 동기화가 깨졌거나 오류 발생 - `, authErr);
                             }
                         }
                         
-                        // Auth 변경이 "실제로 성공"했을 때만 DB를 덮어씌움.
                         if (authChanged) {
                             await updateDoc(targetDocRef, { 
                                 password: targetNewPw,
@@ -2146,7 +2172,6 @@
                             });
                             successCount++;
                         } else {
-                            // 기존 비밀번호가 틀려서 Auth 변경이 안 되면 DB 덮어쓰기도 방지해서 영구 고장 차단
                             failCount++;
                         }
                     }
