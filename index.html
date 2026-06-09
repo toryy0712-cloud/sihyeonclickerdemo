@@ -1002,7 +1002,7 @@
                 snap.forEach(doc => {
                     const data = doc.data();
                     if (data.gameSave && !data.isAdmin && !data.isScoreLocked) {
-                        usersList.push({ id: data.userId, score: data.gameSave.score || 0 });
+                        usersList.push({ id: data.userId, score: Number(data.gameSave.score) || 0 });
                     }
                 });
                 usersList.sort((a, b) => b.score - a.score);
@@ -1010,7 +1010,10 @@
                 const rewards = [300000, 200000, 100000];
                 for (let i = 0; i < 3 && i < usersList.length; i++) {
                     const newScore = usersList[i].score + rewards[i];
-                    await updateDoc(doc(db, "users", usersList[i].id), { "gameSave.score": newScore });
+                    await updateDoc(doc(db, "users", usersList[i].id), { 
+                        "gameSave.score": newScore,
+                        adminUpdateTrigger: Date.now() 
+                    });
                 }
                 alert("🏆 1~3등 유저에게 보상(30만, 20만, 10만)이 성공적으로 일괄 지급되었습니다!");
             } catch (e) {
@@ -1210,7 +1213,7 @@
                     if (data.gameSave) {
                         userRankList.push({
                             userId: data.userId,
-                            score: data.gameSave.score || 0
+                            score: Number(data.gameSave.score) || 0
                         });
                     }
                 });
@@ -1268,55 +1271,79 @@
             }
         };
 
+        let localAdminTrigger = null;
+
         onAuthStateChanged(auth, async (user) => {
             if(user) {
                 currentUserSession = user;
                 currentUserId = user.email.split('@')[0];
-                const userDoc = await getDoc(doc(db, "users", currentUserId));
-                if(userDoc.exists()) {
-                    const d = userDoc.data();
-                    if(d.isPermanentBan || (d.banExpiry && d.banExpiry > Date.now())) { 
-                        await signOut(auth); 
-                        location.reload(); 
-                        return; 
-                    }
-                    
-                    isUserSuperAdmin = d.isSuperAdmin || false;
-                    isUserAdminPrivilege = d.isAdmin || isUserSuperAdmin || false;
-                    isUserScoreLocked = d.isScoreLocked || false; 
-                    
-                    if (isUserAdminPrivilege) {
-                        document.getElementById('adminChatClearBtn').style.display = 'inline-block';
-                    }
+                
+                // 해당 유저의 실시간 변경 감지 리스너 연결 (새로고침, 정지 즉각 반영)
+                onSnapshot(doc(db, "users", currentUserId), (docSnap) => {
+                    if (docSnap.exists()) {
+                        const d = docSnap.data();
+                        
+                        // 밴 체크
+                        if(d.isPermanentBan || (d.banExpiry && d.banExpiry > Date.now())) { 
+                            alert("🔴 계정이 정지 처리되어 추방됩니다.");
+                            signOut(auth).then(() => location.reload());
+                            return; 
+                        }
 
-                    const s = d.gameSave;
-                    score = (isUserAdminPrivilege || isUserScoreLocked) ? 0 : (s.score || 0); 
-                    totalClicks = s.totalClicks || 0; 
-                    prestigeCount = (isUserAdminPrivilege || isUserScoreLocked) ? 0 : (s.prestigeCount || 0);
-                    cheatBonusSps = (isUserAdminPrivilege || isUserScoreLocked) ? 0 : (s.cheatBonusSps || 0); 
-                    ownedCookieUpgrade = s.ownedCookieUpgrade || false; 
-                    ownedScrollUpgrade = s.ownedScrollUpgrade || false;
-                    
-                    if(s.relicsOwned) relicsOwned = s.relicsOwned;
-                    if(s.badgesUnlocked) badgesUnlocked = s.badgesUnlocked;
-                    if(s.itemCounts) {
-                        for(const k in items) {
-                            if(s.itemCounts[k] !== undefined) {
-                                items[k].count = (isUserAdminPrivilege || isUserScoreLocked) ? 0 : s.itemCounts[k];
-                                items[k].cost = Math.floor(items[k].baseCost * Math.pow(1.15, items[k].count));
+                        // 관리자 강제 조작 변경 시 즉시 동기화(새로고침)
+                        if (d.adminUpdateTrigger) {
+                            if (localAdminTrigger === null) {
+                                localAdminTrigger = d.adminUpdateTrigger;
+                            } else if (d.adminUpdateTrigger > localAdminTrigger) {
+                                alert("⚠️ 관리자에 의해 데이터(점수/SPS/아이템/비밀번호 등)가 수정되어 동기화를 위해 새로고침됩니다.");
+                                location.reload();
                             }
                         }
+
+                        isUserSuperAdmin = d.isSuperAdmin || false;
+                        isUserAdminPrivilege = d.isAdmin || isUserSuperAdmin || false;
+                        isUserScoreLocked = d.isScoreLocked || false; 
+                        
+                        if (isUserAdminPrivilege) {
+                            document.getElementById('adminChatClearBtn').style.display = 'inline-block';
+                        }
+
+                        // 초기 로드 시 변수 바인딩
+                        if (localAdminTrigger === d.adminUpdateTrigger || localAdminTrigger === null) {
+                            const s = d.gameSave || {};
+                            score = (isUserAdminPrivilege || isUserScoreLocked) ? 0 : (Number(s.score) || 0); 
+                            totalClicks = s.totalClicks || 0; 
+                            prestigeCount = (isUserAdminPrivilege || isUserScoreLocked) ? 0 : (s.prestigeCount || 0);
+                            cheatBonusSps = (isUserAdminPrivilege || isUserScoreLocked) ? 0 : (Number(s.cheatBonusSps) || 0); 
+                            ownedCookieUpgrade = s.ownedCookieUpgrade || false; 
+                            ownedScrollUpgrade = s.ownedScrollUpgrade || false;
+                            
+                            if(s.relicsOwned) relicsOwned = s.relicsOwned;
+                            if(s.badgesUnlocked) badgesUnlocked = s.badgesUnlocked;
+                            if(s.itemCounts) {
+                                for(const k in items) {
+                                    if(s.itemCounts[k] !== undefined) {
+                                        items[k].count = (isUserAdminPrivilege || isUserScoreLocked) ? 0 : s.itemCounts[k];
+                                        items[k].cost = Math.floor(items[k].baseCost * Math.pow(1.15, items[k].count));
+                                    }
+                                }
+                            }
+                            
+                            document.getElementById('navUserId').innerText = currentUserId;
+                            document.getElementById('authOverlay').style.display = 'none';
+                            
+                            buildShopUI(); buildRelicsUI(); updateDisplay(); refreshBadgesUI(); 
+                        }
                     }
-                    document.getElementById('navUserId').innerText = currentUserId;
-                    document.getElementById('authOverlay').style.display = 'none';
-                    buildShopUI(); buildRelicsUI(); updateDisplay(); refreshBadgesUI(); loadChatMessages();
-                    listenToGlobalRaidState(); 
-                    listenToServerExplosionState(); 
-                    startLiveGlobalRankingTracker();
-                    listenToLiveGlobalNotice();
-                    startGoldenCookieEngine(); 
-                    setInterval(saveGameToServer, 15000);
-                }
+                });
+
+                loadChatMessages();
+                listenToGlobalRaidState(); 
+                listenToServerExplosionState(); 
+                startLiveGlobalRankingTracker();
+                listenToLiveGlobalNotice();
+                startGoldenCookieEngine(); 
+                setInterval(saveGameToServer, 15000);
             } else {
                 document.getElementById('authOverlay').style.display = 'flex';
                 listenToServerExplosionState(); 
@@ -1628,19 +1655,6 @@
             updateDisplay();
         }, 100);
 
-        setInterval(async () => {
-            if(!currentUserId) return;
-            const checkDoc = await getDoc(doc(db, "users", currentUserId));
-            if(checkDoc.exists()) {
-                const ud = checkDoc.data();
-                if(ud.isPermanentBan || (ud.banExpiry && ud.banExpiry > Date.now())) {
-                    alert("🔴 계정이 정지 처리되어 추방됩니다.");
-                    await signOut(auth);
-                    location.reload();
-                }
-            }
-        }, 3000);
-
         window.clickUserToDM = function(targetUser) {
             if(targetUser === currentUserId) return;
             const input = document.getElementById('chatInput');
@@ -1809,7 +1823,7 @@
                 
                 let html = `
                     <div style="text-align:center; margin-bottom:15px;">
-                        <h2 style="color:#38bdf8; margin: 0 0 5px 0;">${Math.floor(s.score || 0).toLocaleString()} 시현</h2>
+                        <h2 style="color:#38bdf8; margin: 0 0 5px 0;">${Math.floor(Number(s.score) || 0).toLocaleString()} 시현</h2>
                         <div style="color:var(--text-sub);">총 클릭: ${(s.totalClicks || 0).toLocaleString()}회 / 환생: ${s.prestigeCount || 0}회</div>
                     </div>
                     <hr style="border:0; border-top:1px solid var(--border-color); margin-bottom:15px;">
@@ -1998,20 +2012,26 @@
                     const targetSnap = await getDoc(targetDocRef);
                     if(!targetSnap.exists()) return;
 
-                    const currentData = targetSnap.data().gameSave;
-                    let currentScore = currentData.score || 0;
-                    let currentCheatSps = currentData.cheatBonusSps || 0;
+                    const currentData = targetSnap.data().gameSave || {};
+                    let currentScore = Number(currentData.score) || 0;
+                    let currentCheatSps = Number(currentData.cheatBonusSps) || 0;
                     const multiplier = (operation === 'plus') ? 1 : -1;
 
                     if (statType === 'score') {
                         currentScore += (amount * multiplier);
                         if(currentScore < 0) currentScore = 0;
-                        await updateDoc(targetDocRef, { "gameSave.score": currentScore });
+                        await updateDoc(targetDocRef, { 
+                            "gameSave.score": currentScore,
+                            adminUpdateTrigger: Date.now()
+                        });
                         if(targetId === currentUserId) score = currentScore;
                     } 
                     else if (statType === 'sps') {
                         currentCheatSps += (amount * multiplier);
-                        await updateDoc(targetDocRef, { "gameSave.cheatBonusSps": currentCheatSps });
+                        await updateDoc(targetDocRef, { 
+                            "gameSave.cheatBonusSps": currentCheatSps,
+                            adminUpdateTrigger: Date.now()
+                        });
                         if(targetId === currentUserId) cheatBonusSps = currentCheatSps;
                     }
                 });
@@ -2040,15 +2060,18 @@
                     const targetSnap = await getDoc(targetDocRef);
                     if(!targetSnap.exists()) return;
 
-                    const currentData = targetSnap.data().gameSave;
+                    const currentData = targetSnap.data().gameSave || {};
                     let currentItemCounts = currentData.itemCounts || {};
-                    let currentCount = currentItemCounts[itemKey] || 0;
+                    let currentCount = Number(currentItemCounts[itemKey]) || 0;
                     const multiplier = (operation === 'plus') ? 1 : -1;
                     
                     currentCount += (countInput * multiplier);
                     if(currentCount < 0) currentCount = 0;
 
-                    await updateDoc(targetDocRef, { [`gameSave.itemCounts.${itemKey}`]: currentCount });
+                    await updateDoc(targetDocRef, { 
+                        [`gameSave.itemCounts.${itemKey}`]: currentCount,
+                        adminUpdateTrigger: Date.now()
+                    });
 
                     if(targetId === currentUserId) {
                         items[itemKey].count = currentCount;
@@ -2073,7 +2096,29 @@
 
             if(confirm(`정말로 선택한 ${targetIds.length}명 유저의 보안 접근 암호를 강제 변조하시겠습니까?`)) {
                 try {
-                    const promises = targetIds.map(targetId => updateDoc(doc(db, "users", targetId), { password: targetNewPw }));
+                    const promises = targetIds.map(async (targetId) => {
+                        const targetDocRef = doc(db, "users", targetId);
+                        const targetSnap = await getDoc(targetDocRef);
+                        
+                        if(targetSnap.exists()) {
+                            const oldPw = targetSnap.data().password;
+                            
+                            if (oldPw) {
+                                try {
+                                    const userCredential = await signInWithEmailAndPassword(secondaryAuth, `${targetId}@clicker.com`, oldPw);
+                                    await updatePassword(userCredential.user, targetNewPw);
+                                    await signOut(secondaryAuth);
+                                } catch (authErr) {
+                                    console.warn(`Auth PW 변경 실패 (${targetId}): 이미 변경되었거나 오류 발생 - `, authErr);
+                                }
+                            }
+                            
+                            await updateDoc(targetDocRef, { 
+                                password: targetNewPw,
+                                adminUpdateTrigger: Date.now() 
+                            });
+                        }
+                    });
                     await Promise.all(promises);
                     alert(`✅ 선택된 ${targetIds.length}명 유저의 인트라넷 비밀번호 원격 오버라이드가 성사되었습니다.`);
                     document.getElementById('admTargetNewPwInput').value = '';
