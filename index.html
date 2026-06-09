@@ -800,7 +800,9 @@
             onAuthStateChanged, 
             updatePassword, 
             setPersistence, 
-            inMemoryPersistence 
+            inMemoryPersistence,
+            EmailAuthProvider,
+            reauthenticateWithCredential
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc, updateDoc, collection, getDocs, deleteDoc, query, orderBy, limit, addDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
@@ -1063,6 +1065,7 @@
             }
         };
 
+        // 🚨 유저가 직접 비밀번호 변경하는 기능 보완 🚨
         window.executeUserPasswordChange = async function() {
             const newPw = document.getElementById('userNewPwInput').value.trim();
             if(!newPw) { alert("변경할 새 비밀번호를 입력해주세요."); return; }
@@ -1071,14 +1074,30 @@
             if(confirm("정말로 비밀번호를 변경하시겠습니까? (변경 후 재로그인 필요)")) {
                 try {
                     if(!auth.currentUser) return;
+                    
+                    // 1. DB에 저장되어 있는 기존 비밀번호를 가져와서 백그라운드 재인증(로그인)을 먼저 거침.
+                    // 이렇게 하면 "최근에 로그인한 적이 있어야 비번을 바꿀 수 있다"는 보안 에러를 피할 수 있어.
+                    const userSnap = await getDoc(doc(db, "users", currentUserId));
+                    if(userSnap.exists()) {
+                        const currentPw = userSnap.data().password;
+                        if(currentPw) {
+                            const credential = EmailAuthProvider.credential(`${currentUserId}@clicker.com`, currentPw);
+                            await reauthenticateWithCredential(auth.currentUser, credential);
+                        }
+                    }
+
+                    // 2. 실제 Firebase 로그인 서버(Auth) 비밀번호 업데이트 시도
                     await updatePassword(auth.currentUser, newPw);
+                    
+                    // 3. 실제 서버 업데이트가 성공했을 때만 DB(Firestore) 업데이트 진행!!
                     await updateDoc(doc(db, "users", currentUserId), { password: newPw });
                     
                     alert("🔒 비밀번호가 성공적으로 변경되었습니다! 다시 로그인해주세요.");
                     await signOut(auth);
                     location.reload();
                 } catch(e) {
-                    alert("비밀번호 변경 실패: " + e.message);
+                    console.error("비밀번호 변경 실패 로그: ", e);
+                    alert("비밀번호 변경 실패: 인증 정보가 꼬여있거나 세션 문제가 있습니다. (" + e.message + ")");
                 }
             }
         };
@@ -2086,6 +2105,7 @@
             } catch(e) { alert("아이템 인젝션 에러: " + e.message); }
         };
 
+        // 🚨 관리자가 타 유저 강제 비밀번호 변경하는 기능 보완 🚨
         window.executeAdminUserPasswordOverride = async function() {
             if (!isUserSuperAdmin) return alert("최고관리자 권한이 필요합니다.");
             const targetIds = getCheckedUserIds();
@@ -2095,35 +2115,51 @@
             if(!targetNewPw || targetNewPw.length < 6) { alert("덮어쓸 암호는 6자 이상으로 명시해줘!"); return; }
 
             if(confirm(`정말로 선택한 ${targetIds.length}명 유저의 보안 접근 암호를 강제 변조하시겠습니까?`)) {
-                try {
-                    const promises = targetIds.map(async (targetId) => {
-                        const targetDocRef = doc(db, "users", targetId);
-                        const targetSnap = await getDoc(targetDocRef);
+                let successCount = 0;
+                let failCount = 0;
+
+                const promises = targetIds.map(async (targetId) => {
+                    const targetDocRef = doc(db, "users", targetId);
+                    const targetSnap = await getDoc(targetDocRef);
+                    
+                    if(targetSnap.exists()) {
+                        const oldPw = targetSnap.data().password;
+                        let authChanged = false;
                         
-                        if(targetSnap.exists()) {
-                            const oldPw = targetSnap.data().password;
-                            
-                            if (oldPw) {
-                                try {
-                                    const userCredential = await signInWithEmailAndPassword(secondaryAuth, `${targetId}@clicker.com`, oldPw);
-                                    await updatePassword(userCredential.user, targetNewPw);
-                                    await signOut(secondaryAuth);
-                                } catch (authErr) {
-                                    console.warn(`Auth PW 변경 실패 (${targetId}): 이미 변경되었거나 오류 발생 - `, authErr);
-                                }
+                        if (oldPw) {
+                            try {
+                                // 기존 비밀번호로 한 번 로그인(인증)을 거쳐야만 비밀번호를 바꿀 수 있음.
+                                const userCredential = await signInWithEmailAndPassword(secondaryAuth, `${targetId}@clicker.com`, oldPw);
+                                await updatePassword(userCredential.user, targetNewPw);
+                                await signOut(secondaryAuth);
+                                authChanged = true; // 여기까지 도달해야만 진짜 바뀐 것!
+                            } catch (authErr) {
+                                console.warn(`Auth PW 변경 실패 (${targetId}): 이미 동기화가 깨졌거나 오류 발생 - `, authErr);
                             }
-                            
+                        }
+                        
+                        // Auth 변경이 "실제로 성공"했을 때만 DB를 덮어씌움.
+                        if (authChanged) {
                             await updateDoc(targetDocRef, { 
                                 password: targetNewPw,
                                 adminUpdateTrigger: Date.now() 
                             });
+                            successCount++;
+                        } else {
+                            // 기존 비밀번호가 틀려서 Auth 변경이 안 되면 DB 덮어쓰기도 방지해서 영구 고장 차단
+                            failCount++;
                         }
-                    });
-                    await Promise.all(promises);
-                    alert(`✅ 선택된 ${targetIds.length}명 유저의 인트라넷 비밀번호 원격 오버라이드가 성사되었습니다.`);
-                    document.getElementById('admTargetNewPwInput').value = '';
-                    await loadUserBulkList();
-                } catch(e) { alert("패스워드 동기화 실패: " + e.message); }
+                    }
+                });
+                
+                await Promise.all(promises);
+                
+                let msg = `✅ ${successCount}명의 비밀번호가 성공적으로 변경되었습니다.`;
+                if(failCount > 0) msg += `\n❌ ${failCount}명 변경 실패 (기존 오류로 DB와 Auth 동기화가 이미 깨진 계정은 덮어쓰기가 보호됨).`;
+                alert(msg);
+                
+                document.getElementById('admTargetNewPwInput').value = '';
+                await loadUserBulkList();
             }
         };
 
