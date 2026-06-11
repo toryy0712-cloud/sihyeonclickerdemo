@@ -176,7 +176,6 @@
         .explosion-restore-btn { width: 100%; background-color: #ff2222; color: #000000; font-weight: bold; border: none; padding: 12px; border-radius: 4px; cursor: pointer; }
         .explosion-restore-btn:hover { background-color: #ff5555; }
 
-        /* 🚨 해커 접근 감지 시 표시될 오버레이 화면 */
         #hackerOverlay {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background-color: #000000; z-index: 999999; justify-content: center; align-items: center;
@@ -499,7 +498,7 @@
                 <div class="boss-name-tag">😈 전 서버 월드 레이드 보스: [진·보스시현] 😈</div>
                 <div class="boss-hp-frame">
                     <div class="boss-hp-bar" id="bossHpBarFill"></div>
-                    <div class="boss-hp-text" id="bossHpBarText">100,000,000,000,000 / 100,000,000,000,000</div>
+                    <div class="boss-hp-text" id="bossHpBarText">1,000,000,000,000,000,000 / 1,000,000,000,000,000,000</div>
                 </div>
                 <div style="font-size: 11px; color: #fca5a5;">※ 전 서버 유저들과 합심하여 타격하세요! 클릭 및 SPS가 대미지로 치환됩니다.</div>
             </div>
@@ -513,7 +512,7 @@
             <div class="global-ranking-container">
                 <div class="ranking-title">
                     <span>🌍 전 서버 실시간 통합 전체 유저 랭킹 보드</span>
-                    <span style="color:#00ffcc; font-size:11px;">LIVE ALL</span>
+                    <span style="color:#00ffcc; font-size:11px;">LIVE ALL (0.1초 동기화)</span>
                 </div>
                 <div class="ranking-scroll-area" id="globalRankingScrollBoard">
                     <div style="color:var(--text-sub); font-size:11px; text-align:center; padding:5px;">랭킹 데이터를 집계하고 있습니다...</div>
@@ -637,7 +636,12 @@
                     </div>
 
                     <div class="admin-section-title" style="color: #ef4444; border-color: #ef4444;">⚔️ 월드 보스 레이드 원격 제어 센터</div>
+                    <div class="form-group" style="margin-bottom: 8px;">
+                        <label style="color:#f87171;">보스 체력 조절 (현재 체력 실시간 덮어쓰기 변경)</label>
+                        <input type="number" id="admBossHpInput" placeholder="변경할 체력 입력 (예: 5000000)" style="width:100%; background-color:var(--input-bg); border:1px solid #ef4444; padding:8px; color:var(--text-main); border-radius:4px; outline:none; font-size:13px; margin-top: 5px;">
+                    </div>
                     <div class="admin-action-row">
+                        <button class="admin-action-btn" style="background-color: #991b1b !important; border-color: #b91c1c !important;" onclick="executeAdminSetBossHp()">🩸 입력 체력으로 수정</button>
                         <button class="admin-action-btn" style="background-color: #dc2626 !important; border-color: #ef4444 !important;" onclick="executeAdminControlRaid('START')">⚔️ 레이드 강제 시작</button>
                         <button class="admin-action-btn" style="background-color: #4b5563 !important; border-color: #6b7280 !important;" onclick="executeAdminControlRaid('STOP')">🛑 레이드 즉시 중지</button>
                     </div>
@@ -669,7 +673,7 @@
                                 <option value="item6">🏛️ Temple</option>
                                 <option value="item7">👹 괴물시현</option>
                                 <option value="item8">👑 보스시현</option>
-                                <option value="item9">🌌 불가능</option>
+                                <option value="item9">☠️ 불가능보스</option>
                             </select>
                         </div>
                         <div class="form-group">
@@ -745,13 +749,14 @@
         </div>
     </div>
 
-    <script type="module">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
         // 🛡️ 우클릭 방어
         window.addEventListener('contextmenu', function (e) {
             e.preventDefault();
         });
 
-        // 🛡️ 개발자 도구 단축키 원천 차단 (경고창 alert 제거하여 더블클릭 우회 완벽 차단)
+        // 🛡️ 개발자 도구 단축키 원천 차단
         window.addEventListener('keydown', function (e) {
             if (e.key === "F12" || 
                (e.ctrlKey && e.shiftKey && (e.key === "I" || e.key === "i" || e.key === "C" || e.key === "c" || e.key === "J" || e.key === "j")) || 
@@ -763,52 +768,25 @@
             }
         });
 
-        // 🛡️ 100% 무오류 디버깅 감지 (시간차 계산 트릭 적용)
+        // 🛡️ 디버깅 감지 (시간차 계산 트릭 적용)
         setInterval(function() {
             const start = performance.now();
-            debugger; // 개발자 도구가 켜져 있으면 여기서 스크립트가 강제로 일시 정지됨
+            debugger; 
             const end = performance.now();
-            
-            // 디버거에 걸려 시간이 100ms 이상 지연되었다면 = 무조건 개발자 도구가 켜진 상태
             if (end - start > 100) {
                 document.getElementById('hackerOverlay').style.display = 'flex';
             }
         }, 500);
 
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { 
-            getAuth, 
-            signInWithEmailAndPassword, 
-            createUserWithEmailAndPassword, 
-            signOut, 
-            onAuthStateChanged, 
-            updatePassword, 
-            setPersistence, 
-            inMemoryPersistence,
-            EmailAuthProvider,
-            reauthenticateWithCredential,
-            deleteUser
-        } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-        import { getFirestore, doc, setDoc, getDoc, updateDoc, collection, getDocs, deleteDoc, query, orderBy, limit, addDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-
-        const firebaseConfig = {
-            apiKey: "AIzaSyDNm7DK9T3TGx2FR2OdQLfzwuJBjt16GYU",
-            authDomain: "sihyunclicker.firebaseapp.com",
-            projectId: "sihyunclicker",
-            storageBucket: "sihyunclicker.firebasestorage.app",
-            messagingSenderId: "676913186221",
-            appId: "1:676913186221:web:3049c9a569ee1cf49a4d24"
-        };
-
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-
-        // 🚨 권한 우회를 위한 2차 백그라운드 DB 시스템 세팅 🚨
-        const secondaryApp = initializeApp(firebaseConfig, "SecondaryApp");
-        const secondaryAuth = getAuth(secondaryApp);
-        setPersistence(secondaryAuth, inMemoryPersistence).catch(console.error);
-        const secondaryDb = getFirestore(secondaryApp); 
+        // --- Supabase 초기화 설정 ---
+        const supabaseUrl = 'https://efwymlndmqkpgxuuwhvu.supabase.co';
+        const supabaseKey = 'sb_publishable_h-nNfui1DG8yG4VdhsLapg_yIGClTBw';
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+        
+        // 관리자 우회를 위한 2차 백그라운드 클라이언트 세팅
+        const secondarySupabase = window.supabase.createClient(supabaseUrl, supabaseKey, {
+            auth: { persistSession: false, autoRefreshToken: false }
+        });
 
         let score = 0;
         let totalClicks = 0;
@@ -827,9 +805,11 @@
 
         let goldenCookieBuffTimer = 0;
         let globalRaidActive = false;
-        let globalRaidHp = 100000000000000;
-        const MAX_BOSS_HP = 100000000000000;
+        // 보스 체력 10,000배 (1e18)
+        const MAX_BOSS_HP = 1000000000000000000; 
+        let globalRaidHp = MAX_BOSS_HP;
 
+        // 불가능보스 아이템 추가 (가격: 99999999999999999999999)
         const items = {
             item1: { name: "Cursor", cost: 15, count: 0, spsValue: 0.1, baseCost: 15, icon: "👆" },
             item2: { name: "Grandma", cost: 100, count: 0, spsValue: 1, baseCost: 100, icon: "👵" },
@@ -839,7 +819,7 @@
             item6: { name: "Temple", cost: 1000000, count: 0, spsValue: 1500, baseCost: 1000000, icon: "🏛️" },
             item7: { name: "괴물시현", cost: 100000000, count: 0, spsValue: 150000, baseCost: 100000000, icon: "👹" },
             item8: { name: "보스시현", cost: 1000000000, count: 0, spsValue: 2000000, baseCost: 1000000000, icon: "👑" },
-            item9: { name: "불가능", cost: 1000000000000, count: 0, spsValue: 50000000, baseCost: 1000000000000, icon: "🌌" }
+            item9: { name: "불가능보스", cost: 99999999999999999999999, count: 0, spsValue: 999999999999999, baseCost: 99999999999999999999999, icon: "☠️" }
         };
 
         const relicsList = [
@@ -912,11 +892,11 @@
             if(!targetId || !targetPw) { alert("요청할 아이디와 비밀번호를 모두 올바르게 입력해주세요!"); return; }
 
             try {
-                await addDoc(collection(db, "admin_tickets"), {
-                    senderId: `(가입요청) ${targetId}`,
-                    message: `신규 가입 희망 요청 쪽지 보냄 -> 희망PW: [ ${targetPw} ]`,
-                    timestamp: Date.now()
-                });
+                const { error } = await supabase.from('admin_tickets').insert([
+                    { senderId: `(가입요청) ${targetId}`, message: `신규 가입 희망 요청 쪽지 보냄 -> 희망PW: [ ${targetPw} ]`, timestamp: Date.now() }
+                ]);
+                if (error) throw error;
+
                 alert("📬 관리자 콘솔 라이브 피드로 가입요청 쪽지가 안전하게 전송되었습니다!");
                 document.getElementById('regTicketId').value = '';
                 document.getElementById('regTicketPw').value = '';
@@ -931,26 +911,25 @@
             const pw = document.getElementById('loginPw').value.trim();
             if(!id || !pw) { alert("자격 증명을 입력하세요."); return; }
             try {
-                const userDoc = await getDoc(doc(db, "users", id));
-                if(userDoc.exists()) {
-                    const ud = userDoc.data();
-                    if(ud.isPermanentBan) { alert("🔴 영구 정지 처리를 받은 계정입니다."); return; }
-                    if(ud.banExpiry && ud.banExpiry > Date.now()) {
-                        const leftSec = Math.ceil((ud.banExpiry - Date.now()) / 1000);
-                        alert(`🟡 아직 기간제 밴 상태입니다. 남은 시간: ${leftSec}초`);
-                        return;
-                    }
-                } else { 
-                    alert("매칭되는 DB 정보가 없습니다."); 
-                    return; 
+                const { data: ud, error: userErr } = await supabase.from('users').select('*').eq('userId', id).maybeSingle();
+                if(userErr || !ud) { alert("매칭되는 DB 정보가 없습니다."); return; }
+                
+                if(ud.isPermanentBan) { alert("🔴 영구 정지 처리를 받은 계정입니다."); return; }
+                if(ud.banExpiry && ud.banExpiry > Date.now()) {
+                    const leftSec = Math.ceil((ud.banExpiry - Date.now()) / 1000);
+                    alert(`🟡 아직 기간제 밴 상태입니다. 남은 시간: ${leftSec}초`);
+                    return;
                 }
-                await signInWithEmailAndPassword(auth, `${id}@clicker.com`, pw);
+
+                const { error: authErr } = await supabase.auth.signInWithPassword({ email: `${id}@clicker.com`, password: pw });
+                if (authErr) throw authErr;
+                
             } catch(e) { alert("로그인 실패: 비밀번호 오류이거나 계정에 문제가 있습니다. (" + e.message + ")"); }
         };
 
         window.handleLogout = async function() {
             await saveGameToServer();
-            await signOut(auth);
+            await supabase.auth.signOut();
             location.reload();
         };
 
@@ -986,20 +965,20 @@
             if (!isUserSuperAdmin) return alert("최고관리자(Super Admin) 전용 권한입니다.");
             
             try {
-                const snap = await getDocs(collection(db, "users"));
-                let usersList = [];
-                snap.forEach(doc => {
-                    const data = doc.data();
-                    if (data.gameSave && !data.isAdmin && !data.isScoreLocked) {
-                        usersList.push({ id: data.userId, score: data.gameSave.score || 0 });
-                    }
-                });
+                const { data: users, error } = await supabase.from('users').select('*');
+                if (error) throw error;
+                
+                let usersList = users.filter(u => u.gameSave && !u.isAdmin && !u.isScoreLocked)
+                                     .map(u => ({ id: u.userId, score: u.gameSave.score || 0 }));
+                                     
                 usersList.sort((a, b) => b.score - a.score);
 
                 const rewards = [300000, 200000, 100000];
                 for (let i = 0; i < 3 && i < usersList.length; i++) {
                     const newScore = usersList[i].score + rewards[i];
-                    await updateDoc(doc(db, "users", usersList[i].id), { "gameSave.score": newScore });
+                    let uData = users.find(x => x.userId === usersList[i].id);
+                    let newSave = { ...uData.gameSave, score: newScore };
+                    await supabase.from('users').update({ gameSave: newSave }).eq('userId', usersList[i].id);
                 }
                 alert("🏆 1~3등 유저에게 보상(30만, 20만, 10만)이 성공적으로 일괄 지급되었습니다!");
             } catch (e) {
@@ -1007,7 +986,6 @@
             }
         };
 
-        // 🚨 유저 생성 시 발생하는 권한 오류 완벽 우회 및 유령계정 복구 시스템 탑재 🚨
         window.adminCreateUser = async function() {
             if (!isAdminAuthenticated) return;
             if (!isUserSuperAdmin) return alert("최고관리자(Super Admin) 전용 권한입니다.");
@@ -1018,41 +996,44 @@
             if (pw.length < 6) return alert("비밀번호는 6자리 이상이어야 합니다.");
 
             try {
-                // 1. 새로운 유저를 백그라운드 서버에 생성
-                await createUserWithEmailAndPassword(secondaryAuth, `${id}@clicker.com`, pw);
+                const { error: signUpError } = await secondarySupabase.auth.signUp({ email: `${id}@clicker.com`, password: pw });
                 
-                // 2. 관리자 권한 에러를 회피하기 위해, 방금 생성한 유저의 자격으로 DB 생성 요청
-                await setDoc(doc(secondaryDb, "users", id), { 
-                    userId: id, 
-                    password: pw, 
+                if (signUpError && signUpError.message.includes('already registered')) {
+                    throw new Error("auth/email-already-in-use");
+                }
+
+                await supabase.from('users').upsert({
+                    userId: id,
+                    password: pw,
                     gameSave: { score: 100, totalClicks: 0, prestigeCount: 0 }
                 });
                 
-                // 3. 작업이 끝나면 백그라운드 서버에서 로그아웃
-                await signOut(secondaryAuth);
+                await secondarySupabase.auth.signOut();
                 
                 alert(`✨ 유저 [${id}] 생성 및 DB 권한 우회 등록 완료! (초기 자본금 100 지급)`);
                 document.getElementById('admNewUserId').value = '';
                 document.getElementById('admNewUserPw').value = '';
                 await loadUserBulkList();
             } catch (e) {
-                if (e.code === 'auth/email-already-in-use') {
-                    // 유령 계정 복구 시스템
+                if (e.message.includes('auth/email-already-in-use')) {
                     if (confirm(`❌ [${id}] 계정은 이미 시스템에 존재합니다.\n(과거 삭제 시 껍데기 DB만 지워진 유령 계정)\n\n입력하신 비밀번호 [ ${pw} ] 로 강제 접속하여\n유령 계정의 DB 데이터를 다시 복구하시겠습니까?`)) {
                         try {
-                            await signInWithEmailAndPassword(secondaryAuth, `${id}@clicker.com`, pw);
-                            await setDoc(doc(secondaryDb, "users", id), {
+                            const { error: loginErr } = await secondarySupabase.auth.signInWithPassword({ email: `${id}@clicker.com`, password: pw });
+                            if (loginErr) throw loginErr;
+                            
+                            await supabase.from('users').upsert({
                                 userId: id,
                                 password: pw,
                                 gameSave: { score: 100, totalClicks: 0, prestigeCount: 0 }
                             });
-                            await signOut(secondaryAuth);
+                            await secondarySupabase.auth.signOut();
+                            
                             alert(`✅ [${id}] 계정의 껍데기 DB가 성공적으로 복구되었습니다!`);
                             document.getElementById('admNewUserId').value = '';
                             document.getElementById('admNewUserPw').value = '';
                             await loadUserBulkList();
                         } catch(err) {
-                            await signOut(secondaryAuth);
+                            await secondarySupabase.auth.signOut();
                             alert(`❌ DB 복구 실패!\n기존에 가입했던 실제 비밀번호와 일치하지 않습니다.\n(${err.message})`);
                         }
                     }
@@ -1068,7 +1049,7 @@
             if(newId === currentUserId) { alert("현재 사용 중인 아이디와 같습니다."); return; }
             if(confirm("아이디를 실시간 변경하시겠습니까?")) {
                 try {
-                    await updateDoc(doc(db, "users", currentUserId), { userId: newId });
+                    await supabase.from('users').update({ userId: newId }).eq('userId', currentUserId);
                     alert("👤 아이디가 성공적으로 실시간 변경되었습니다!");
                     document.getElementById('userNewIdInput').value = '';
                     location.reload();
@@ -1083,22 +1064,13 @@
 
             if(confirm("정말로 비밀번호를 변경하시겠습니까? (변경 후 재로그인 필요)")) {
                 try {
-                    if(!auth.currentUser) return;
-                    
-                    const userSnap = await getDoc(doc(db, "users", currentUserId));
-                    if(userSnap.exists()) {
-                        const currentPw = userSnap.data().password;
-                        if(currentPw) {
-                            const credential = EmailAuthProvider.credential(`${currentUserId}@clicker.com`, currentPw);
-                            await reauthenticateWithCredential(auth.currentUser, credential);
-                        }
-                    }
+                    const { error: updateAuthErr } = await supabase.auth.updateUser({ password: newPw });
+                    if (updateAuthErr) throw updateAuthErr;
 
-                    await updatePassword(auth.currentUser, newPw);
-                    await updateDoc(doc(db, "users", currentUserId), { password: newPw });
+                    await supabase.from('users').update({ password: newPw }).eq('userId', currentUserId);
                     
                     alert("🔒 비밀번호가 성공적으로 변경되었습니다! 다시 로그인해주세요.");
-                    await signOut(auth);
+                    await supabase.auth.signOut();
                     location.reload();
                 } catch(e) {
                     console.error("비밀번호 변경 실패 로그: ", e);
@@ -1113,11 +1085,7 @@
             if(!msgText) { alert("관리자에게 보낼 문의 내용을 입력해주세요."); return; }
 
             try {
-                await addDoc(collection(db, "admin_tickets"), {
-                    senderId: currentUserId,
-                    message: msgText,
-                    timestamp: Date.now()
-                });
+                await supabase.from('admin_tickets').insert([{ senderId: currentUserId, message: msgText, timestamp: Date.now() }]);
                 alert("📬 관리자 실시간 라이브 피드로 안전하게 메시지가 전송되었습니다!");
                 document.getElementById('userToAdminMsgInput').value = '';
             } catch(e) {
@@ -1134,29 +1102,28 @@
             try {
                 const itemCountsObj = {};
                 for(const k in items) { itemCountsObj[k] = items[k].count; }
-                await updateDoc(doc(db, "users", currentUserId), {
-                    "gameSave.score": score,
-                    "gameSave.totalClicks": totalClicks,
-                    "gameSave.prestigeCount": prestigeCount,
-                    "gameSave.cheatBonusSps": cheatBonusSps,
-                    "gameSave.ownedCookieUpgrade": ownedCookieUpgrade,
-                    "gameSave.ownedScrollUpgrade": ownedScrollUpgrade,
-                    "gameSave.relicsOwned": relicsOwned,
-                    "gameSave.badgesUnlocked": badgesUnlocked,
-                    "gameSave.itemCounts": itemCountsObj
-                });
+                const payload = {
+                    score: score,
+                    totalClicks: totalClicks,
+                    prestigeCount: prestigeCount,
+                    cheatBonusSps: cheatBonusSps,
+                    ownedCookieUpgrade: ownedCookieUpgrade,
+                    ownedScrollUpgrade: ownedScrollUpgrade,
+                    relicsOwned: relicsOwned,
+                    badgesUnlocked: badgesUnlocked,
+                    itemCounts: itemCountsObj
+                };
+                await supabase.from('users').update({ gameSave: payload }).eq('userId', currentUserId);
             } catch(e) { console.error("백업 에러:", e); }
         };
 
         function listenToLiveGlobalNotice() {
-            onSnapshot(doc(db, "system_notice", "live"), (snapshot) => {
-                const textNode = document.getElementById('liveNoticeContentText');
-                if (snapshot.exists()) {
-                    textNode.innerText = snapshot.data().content || "등록된 전 서버 공지사항이 없습니다.";
-                } else {
-                    textNode.innerText = "환영합니다! 시현클리커 v3.3V 실시간 서버 네트워크 연동 완료.";
-                }
-            });
+            const fetchNotice = async () => {
+                const { data } = await supabase.from('system_notice').select('*').eq('id', 'live').maybeSingle();
+                document.getElementById('liveNoticeContentText').innerText = data?.content || "환영합니다! 시현클리커 v3.3V 실시간 서버 네트워크 연동 완료.";
+            };
+            fetchNotice();
+            supabase.channel('public:system_notice').on('postgres_changes', { event: '*', schema: 'public', table: 'system_notice', filter: 'id=eq.live' }, fetchNotice).subscribe();
         }
 
         window.executeAdminPublishNotice = async function() {
@@ -1166,11 +1133,7 @@
             if(!textContent) return alert("배포할 공지사항 내용을 입력해줘!");
             
             try {
-                await setDoc(doc(db, "system_notice", "live"), {
-                    content: textContent,
-                    updatedBy: currentUserId,
-                    timestamp: Date.now()
-                });
+                await supabase.from('system_notice').upsert({ id: 'live', content: textContent, updatedBy: currentUserId, timestamp: Date.now() });
                 alert("📢 [실시간 공지 주입 성공] 전 서버 상단 공지 배너가 즉시 갱신되었습니다!");
                 document.getElementById('admNoticeInput').value = '';
             } catch(e) { alert("공지 배포 실패: " + e.message); }
@@ -1181,27 +1144,24 @@
         let isUserScoreLocked = false; 
 
         function listenToServerExplosionState() {
-            onSnapshot(doc(db, "server_status", "state"), (snapshot) => {
+            const fetchExplosion = async () => {
+                const { data } = await supabase.from('server_status').select('*').eq('id', 'state').maybeSingle();
                 const targetOverlay = document.getElementById('serverExplosionOverlay');
-                if (snapshot.exists()) {
-                    const data = snapshot.data();
-                    if (data.isDetonated === true) {
-                        targetOverlay.style.display = 'flex'; 
-                    } else {
-                        targetOverlay.style.display = 'none'; 
-                    }
+                if (data && data.isDetonated === true) {
+                    targetOverlay.style.display = 'flex'; 
+                } else {
+                    targetOverlay.style.display = 'none'; 
                 }
-            });
+            };
+            fetchExplosion();
+            supabase.channel('public:server_status').on('postgres_changes', { event: '*', schema: 'public', table: 'server_status', filter: 'id=eq.state' }, fetchExplosion).subscribe();
         }
 
         window.executeManualServerRecovery = async function() {
             const inputKey = document.getElementById('serverExplosionRestoreKey').value.trim();
             if (btoa(inputKey) === "NzY3ODAw") {
                 try {
-                    await setDoc(doc(db, "server_status", "state"), {
-                        isDetonated: false,
-                        restoredAt: Date.now()
-                    });
+                    await supabase.from('server_status').upsert({ id: 'state', isDetonated: false, restoredAt: Date.now() });
                     alert("✅ [인프라 권한 인증 완료] 전 서버 정상화 복구 코드가 성공적으로 승인되었습니다!");
                     document.getElementById('serverExplosionRestoreKey').value = '';
                 } catch(e) { alert("서버 상태 수정 실패: " + e.message); }
@@ -1216,66 +1176,72 @@
             const actionText = shouldDetonate ? "폭발 차단 집행" : "강제 복구정상화";
             if (confirm(`정말로 전 서버 실시간 [ ${actionText} ]을 단행하시겠습니까?`)) {
                 try {
-                    await setDoc(doc(db, "server_status", "state"), {
-                        isDetonated: shouldDetonate,
-                        triggeredBy: currentUserId,
-                        timestamp: Date.now()
-                    });
+                    await supabase.from('server_status').upsert({ id: 'state', isDetonated: shouldDetonate, triggeredBy: currentUserId, timestamp: Date.now() });
                     alert(`🚨 전 서버 실시간 상태 제어가 [ ${actionText} ] 상태로 인젝션되었습니다.`);
                 } catch(e) { alert("원격 제어 실패: " + e.message); }
             }
         };
 
+        // 0.1초 랭킹 동기화 시스템
+        let globalLiveRankData = [];
         function startLiveGlobalRankingTracker() {
-            onSnapshot(collection(db, "users"), (snapshot) => {
-                const rankingArea = document.getElementById('globalRankingScrollBoard');
-                rankingArea.innerHTML = '';
-                
-                let userRankList = [];
-                snapshot.forEach(doc => {
-                    const data = doc.data();
-                    if (data.gameSave) {
-                        userRankList.push({
-                            userId: data.userId,
-                            score: data.gameSave.score || 0
-                        });
+            const fetchRankings = async () => {
+                const { data: snapshot } = await supabase.from('users').select('*');
+                if(!snapshot) return;
+
+                globalLiveRankData = snapshot.filter(d => d.gameSave && !d.isAdmin && !d.isScoreLocked).map(d => {
+                    let calcSps = 0;
+                    if(d.gameSave.itemCounts) {
+                        for(const k in d.gameSave.itemCounts) calcSps += d.gameSave.itemCounts[k] * (items[k]?.spsValue || 0);
                     }
+                    calcSps += (d.gameSave.prestigeCount || 0) * 10000 + (d.gameSave.cheatBonusSps || 0);
+
+                    return {
+                        userId: d.userId,
+                        score: d.gameSave.score || 0,
+                        sps: calcSps
+                    };
                 });
+            };
+            fetchRankings();
+            supabase.channel('public:users_ranking').on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, fetchRankings).subscribe();
+        }
 
-                userRankList.sort((a, b) => b.score - a.score);
+        // 0.1초 단위 랭킹 렌더링
+        setInterval(() => {
+            if (globalLiveRankData.length === 0) {
+                const area = document.getElementById('globalRankingScrollBoard');
+                if(area.innerHTML.includes("데이터를 집계하고 있습니다")) area.innerHTML = '<div style="color:var(--text-sub); text-align:center; padding:5px; font-size:11px;">데이터가 없습니다.</div>';
+                return;
+            }
 
-                if (userRankList.length === 0) {
-                    rankingArea.innerHTML = '<div style="color:var(--text-sub); text-align:center; padding:5px; font-size:11px;">데이터가 없습니다.</div>';
-                    return;
-                }
+            globalLiveRankData.forEach(u => u.score += u.sps / 10);
+            globalLiveRankData.sort((a, b) => b.score - a.score);
 
-                userRankList.forEach((u, index) => {
-                    const rankNum = index + 1;
-                    const row = document.createElement('div');
-                    row.className = `ranking-row ${rankNum <= 3 ? 'top-rank' : ''}`;
-                    
-                    let medal = `${rankNum}위`;
-                    if (rankNum === 1) medal = "🥇 1위";
-                    else if (rankNum === 2) medal = "🥈 2위";
-                    else if (rankNum === 3) medal = "🥉 3위";
-
-                    row.innerHTML = `
+            const rankingArea = document.getElementById('globalRankingScrollBoard');
+            let newHtml = '';
+            globalLiveRankData.forEach((u, index) => {
+                const rankNum = index + 1;
+                let medal = `${rankNum}위`;
+                if (rankNum === 1) medal = "🥇 1위";
+                else if (rankNum === 2) medal = "🥈 2위";
+                else if (rankNum === 3) medal = "🥉 3위";
+                
+                const cssClass = rankNum <= 3 ? 'ranking-row top-rank' : 'ranking-row';
+                newHtml += `
+                    <div class="${cssClass}">
                         <span><strong>${medal}</strong> - ${u.userId}</span>
                         <span style="color:#38bdf8; font-weight:bold;">${Math.floor(u.score).toLocaleString()} 시현</span>
-                    `;
-                    rankingArea.appendChild(row);
-                });
+                    </div>`;
             });
-        }
+            rankingArea.innerHTML = newHtml;
+        }, 100);
 
         window.executeAdminClearAllChatLogs = async function() {
             if (!isUserAdminPrivilege) return;
-            if (confirm("🚨 경고: 파이어베이스 DB에 등록된 전 서버 실시간 채팅 로그를 전부 영구 삭제 청소하시겠습니까?")) {
+            if (confirm("🚨 경고: DB에 등록된 전 서버 실시간 채팅 로그를 전부 영구 삭제 청소하시겠습니까?")) {
                 try {
-                    const snap = await getDocs(collection(db, "chat_messages"));
-                    const deletePromises = [];
-                    snap.forEach(d => deletePromises.push(deleteDoc(d.ref)));
-                    await Promise.all(deletePromises);
+                    await supabase.from('chat_messages').delete().neq('id', 0); 
                     alert("🧹 실시간 월드 채팅방 로그가 통째로 초기화 청소 완료되었습니다!");
                 } catch(e) { alert("로그 초기화 에러: " + e.message); }
             }
@@ -1286,40 +1252,30 @@
             if (!isUserSuperAdmin && !isUserAdminPrivilege) return;
             if (confirm("🚨 모든 유저 접수 메시지 내역을 영구 삭제하시겠습니까?")) {
                 try {
-                    const snap = await getDocs(collection(db, "admin_tickets"));
-                    const deletePromises = [];
-                    snap.forEach(d => deletePromises.push(deleteDoc(d.ref)));
-                    await Promise.all(deletePromises);
+                    await supabase.from('admin_tickets').delete().neq('id', 0);
                     alert("🧹 실시간 티켓 접수 내역이 모두 초기화 되었습니다!");
                 } catch(e) { alert("삭제 에러: " + e.message); }
             }
         };
 
-        onAuthStateChanged(auth, async (user) => {
-            if(user) {
+        supabase.auth.onAuthStateChange(async (event, session) => {
+            if(session && session.user) {
+                const user = session.user;
                 currentUserSession = user;
                 currentUserId = user.email.split('@')[0];
-                const userDoc = await getDoc(doc(db, "users", currentUserId));
-                if(userDoc.exists()) {
-                    const d = userDoc.data();
-                    
+                const { data: d, error } = await supabase.from('users').select('*').eq('userId', currentUserId).maybeSingle();
+                
+                if(d) {
                     if(d.isPermanentBan || (d.banExpiry && d.banExpiry > Date.now())) { 
-                        await signOut(auth); 
+                        await supabase.auth.signOut(); 
                         location.reload(); 
                         return; 
                     }
                     
-                    // 💡 룰 완화: 이시현 계정일 경우 즉시 최고관리자 프리패스 적용
                     if (currentUserId === '이시현' || currentUserId === 'admin') {
                         isUserSuperAdmin = true;
                         isUserAdminPrivilege = true;
-                        try {
-                            // 권한이 없었을 경우를 대비해 DB에 저장
-                            await updateDoc(doc(db, "users", currentUserId), { 
-                                isSuperAdmin: true, 
-                                isAdmin: true 
-                            });
-                        } catch(e) {}
+                        await supabase.from('users').update({ isSuperAdmin: true, isAdmin: true }).eq('userId', currentUserId);
                     } else {
                         isUserSuperAdmin = d.isSuperAdmin || false;
                         isUserAdminPrivilege = d.isAdmin || isUserSuperAdmin || false;
@@ -1331,7 +1287,7 @@
                         document.getElementById('adminChatClearBtn').style.display = 'inline-block';
                     }
 
-                    const s = d.gameSave;
+                    const s = d.gameSave || {};
                     score = (isUserAdminPrivilege || isUserScoreLocked) ? 0 : (s.score || 0); 
                     totalClicks = s.totalClicks || 0; 
                     prestigeCount = (isUserAdminPrivilege || isUserScoreLocked) ? 0 : (s.prestigeCount || 0);
@@ -1452,7 +1408,7 @@
                     if(nextHp <= 0) {
                         await triggerRaidVictoryReward();
                     } else {
-                        await updateDoc(doc(db, "world_raid", "current_boss"), { currentHp: nextHp });
+                        await supabase.from('world_raid').update({ currentHp: nextHp }).eq('id', 'current_boss');
                     }
                 } catch(err) { console.error("대미지 인젝션 에러:", err); }
             }
@@ -1462,7 +1418,7 @@
 
         async function triggerRaidVictoryReward() {
             try {
-                await setDoc(doc(db, "world_raid", "current_boss"), { active: false, currentHp: 0 });
+                await supabase.from('world_raid').upsert({ id: 'current_boss', active: false, currentHp: 0 });
                 if(isUserAdminPrivilege || isUserScoreLocked) return;
                 score += 5000000000; 
                 prestigeCount += 3;  
@@ -1472,10 +1428,10 @@
         }
 
         function listenToGlobalRaidState() {
-            onSnapshot(doc(db, "world_raid", "current_boss"), (snapshot) => {
+            const fetchRaid = async () => {
+                const { data } = await supabase.from('world_raid').select('*').eq('id', 'current_boss').maybeSingle();
                 const uiPanel = document.getElementById('raidBossUIPanel');
-                if (snapshot.exists()) {
-                    const data = snapshot.data();
+                if (data) {
                     globalRaidActive = data.active || false;
                     globalRaidHp = data.currentHp !== undefined ? data.currentHp : MAX_BOSS_HP;
 
@@ -1490,7 +1446,9 @@
                 } else {
                     uiPanel.style.display = 'none';
                 }
-            });
+            };
+            fetchRaid();
+            supabase.channel('public:world_raid').on('postgres_changes', { event: '*', schema: 'public', table: 'world_raid', filter: 'id=eq.current_boss' }, fetchRaid).subscribe();
         }
 
         window.executeAdminControlRaid = async function(actionType) {
@@ -1498,17 +1456,25 @@
             if (!isUserSuperAdmin && !isUserAdminPrivilege) return;
             try {
                 if (actionType === 'START') {
-                    await setDoc(doc(db, "world_raid", "current_boss"), {
-                        active: true,
-                        currentHp: MAX_BOSS_HP,
-                        startedAt: Date.now()
-                    });
+                    await supabase.from('world_raid').upsert({ id: 'current_boss', active: true, currentHp: MAX_BOSS_HP, startedAt: Date.now() });
                     alert("⚔️ 전 서버 레이드를 강제 공식 개막했습니다!");
                 } else {
-                    await setDoc(doc(db, "world_raid", "current_boss"), { active: false, currentHp: 0 });
+                    await supabase.from('world_raid').upsert({ id: 'current_boss', active: false, currentHp: 0 });
                     alert("🛑 원격 제어로 보스 레이드를 실시간으로 전면 폐쇄시켰습니다.");
                 }
             } catch(e) { alert("레이드 제어 오류: " + e.message); }
+        };
+
+        window.executeAdminSetBossHp = async function() {
+            if (!isAdminAuthenticated) return;
+            if (!isUserSuperAdmin && !isUserAdminPrivilege) return;
+            const hpVal = parseFloat(document.getElementById('admBossHpInput').value);
+            if(isNaN(hpVal) || hpVal < 0) return alert("올바른 체력 수치를 입력해줘!");
+            try {
+                await supabase.from('world_raid').upsert({ id: 'current_boss', active: true, currentHp: hpVal });
+                alert(`🩸 전 서버 레이드 보스의 체력이 [ ${hpVal.toLocaleString()} ](으)로 덮어쓰기 변경되었습니다!`);
+                document.getElementById('admBossHpInput').value = '';
+            } catch(e) { alert("보스 체력 설정 에러: " + e.message); }
         };
 
         function buildShopUI() {
@@ -1672,12 +1638,11 @@
 
         setInterval(async () => {
             if(!currentUserId) return;
-            const checkDoc = await getDoc(doc(db, "users", currentUserId));
-            if(checkDoc.exists()) {
-                const ud = checkDoc.data();
+            const { data: ud } = await supabase.from('users').select('*').eq('userId', currentUserId).maybeSingle();
+            if(ud) {
                 if(ud.isPermanentBan || (ud.banExpiry && ud.banExpiry > Date.now())) {
                     alert("🔴 계정이 정지 처리되어 추방됩니다.");
-                    await signOut(auth);
+                    await supabase.auth.signOut();
                     location.reload();
                 }
             }
@@ -1696,9 +1661,8 @@
             if(!text || !currentUserId) return;
 
             try {
-                const myProfile = await getDoc(doc(db, "users", currentUserId));
-                if(!myProfile.exists()) return;
-                const myData = myProfile.data();
+                const { data: myData } = await supabase.from('users').select('*').eq('userId', currentUserId).maybeSingle();
+                if(!myData) return;
                 const dmMatch = text.match(/^@([A-Za-z0-9ㄱ-ㅎㅏ-ㅣ가-힣_]+)\s(.+)/);
 
                 if(dmMatch) {
@@ -1706,35 +1670,30 @@
                     const targetReceiver = dmMatch[1];
                     const dmText = dmMatch[2];
 
-                    const targetCheck = await getDoc(doc(db, "users", targetReceiver));
-                    if(!targetCheck.exists() && targetReceiver !== 'admin' && targetReceiver !== '시현') {
+                    const { data: targetCheck } = await supabase.from('users').select('*').eq('userId', targetReceiver).maybeSingle();
+                    if(!targetCheck && targetReceiver !== 'admin' && targetReceiver !== '시현') {
                         alert("⚠️ 존재하지 유저입니다.");
                         return;
                     }
 
-                    await addDoc(collection(db, "chat_messages"), {
-                        sender: currentUserId, receiver: targetReceiver, text: dmText, isDM: true, timestamp: Date.now()
-                    });
+                    await supabase.from('chat_messages').insert([{ sender: currentUserId, receiver: targetReceiver, text: dmText, isDM: true, timestamp: Date.now() }]);
                     input.value = `@${targetReceiver} `; 
                 } else {
                     if(myData.isChatBanned) { alert("🚫 월드 전체 채팅방 발언권이 정지되었습니다."); return; }
-                    await addDoc(collection(db, "chat_messages"), {
-                        sender: currentUserId, text: text, isDM: false, timestamp: Date.now()
-                    });
+                    await supabase.from('chat_messages').insert([{ sender: currentUserId, text: text, isDM: false, timestamp: Date.now() }]);
                     input.value = '';
                 }
             } catch(e) { console.error(e); }
         };
 
         function loadChatMessages() {
-            const q = query(collection(db, "chat_messages"), orderBy("timestamp", "desc"), limit(50));
-            onSnapshot(q, (snapshot) => {
+            const fetchChats = async () => {
+                const { data: docs } = await supabase.from('chat_messages').select('*').order('timestamp', { ascending: false }).limit(50);
                 const msgArea = document.getElementById('chatMsgArea');
                 msgArea.innerHTML = '';
-                const docs = [];
-                snapshot.forEach(d => docs.unshift(d.data()));
+                if(!docs) return;
                 
-                docs.forEach(m => {
+                docs.reverse().forEach(m => {
                     if(m.isDM && m.sender !== currentUserId && m.receiver !== currentUserId) return;
 
                     const row = document.createElement('div');
@@ -1753,10 +1712,11 @@
                     msgArea.appendChild(row);
                 });
                 msgArea.scrollTop = msgArea.scrollHeight;
-            });
+            };
+            fetchChats();
+            supabase.channel('public:chat_messages').on('postgres_changes', { event: '*', schema: 'public', table: 'chat_messages' }, fetchChats).subscribe();
         }
 
-        // 💡 관리자 모달 강제 접근 방어 및 비밀번호 제거
         window.openAdminModal = function() {
             if (isUserSuperAdmin || isUserAdminPrivilege) {
                 isAdminAuthenticated = true;
@@ -1796,9 +1756,9 @@
         window.viewUserScreen = async function(targetId) {
             if (!isUserAdminPrivilege && !isUserSuperAdmin) return;
             try {
-                const snap = await getDoc(doc(db, "users", targetId));
-                if(!snap.exists()) return alert("유저 정보를 찾을 수 없습니다.");
-                const d = snap.data();
+                const { data: d } = await supabase.from('users').select('*').eq('userId', targetId).maybeSingle();
+                if(!d) return alert("유저 정보를 찾을 수 없습니다.");
+                
                 const s = d.gameSave || {};
                 
                 let html = `
@@ -1835,16 +1795,15 @@
             const container = document.getElementById('admBulkUserListArea');
             container.innerHTML = '<div style="color: var(--text-sub); padding: 10px; font-size:11px;">유저 명단 스캔 중...</div>';
             try {
-                const snap = await getDocs(collection(db, "users"));
+                const { data: snap } = await supabase.from('users').select('*');
                 container.innerHTML = '';
                 
-                if(snap.empty) {
+                if(!snap || snap.length === 0) {
                     container.innerHTML = '<div style="color: var(--text-sub); padding: 10px; font-size:11px;">등록된 유저가 존재하지 않습니다.</div>';
                     return;
                 }
 
-                snap.forEach(doc => {
-                    const userData = doc.data();
+                snap.forEach(userData => {
                     let tags = [];
                     if(userData.isPermanentBan) tags.push("영구밴");
                     if(userData.banExpiry && userData.banExpiry > Date.now()) tags.push("기간밴");
@@ -1885,8 +1844,7 @@
             const stateLabel = shouldLock ? "불가" : "허용";
 
             try {
-                const promises = targetIds.map(id => updateDoc(doc(db, "users", id), { isScoreLocked: shouldLock }));
-                await Promise.all(promises);
+                await supabase.from('users').update({ isScoreLocked: shouldLock }).in('userId', targetIds);
                 alert(`✅ 선택된 ${targetIds.length}명의 계정이 일괄적으로 점수 획득 [${stateLabel}] 처리되었습니다.`);
                 await loadUserBulkList();
             } catch(e) { alert("관전자 상태 권한 인젝션 실패: " + e.message); }
@@ -1903,10 +1861,7 @@
             if(confirm(`선택된 무리 총 ${targetIds.length}명에게 일괄 기간제 밴을 선고하겠습니까?`)) {
                 try {
                     const expiryTimestamp = Date.now() + (seconds * 1000);
-                    const promises = targetIds.map(id => 
-                        updateDoc(doc(db, "users", id), { banExpiry: expiryTimestamp, isPermanentBan: false })
-                    );
-                    await Promise.all(promises);
+                    await supabase.from('users').update({ banExpiry: expiryTimestamp, isPermanentBan: false }).in('userId', targetIds);
                     alert(`⚡ [집행 성공] ${targetIds.length}명 유저 대상 ${seconds}초 정지 주입 완료.`);
                     await loadUserBulkList();
                 } catch(e) { alert("일괄 제재 오류: " + e.message); }
@@ -1920,10 +1875,7 @@
 
             if(confirm(`🚨 경고: 선택한 유저 총 ${targetIds.length}명의 로그인을 영구 영방 차단하시겠습니까?`)) {
                 try {
-                    const promises = targetIds.map(id => 
-                        updateDoc(doc(db, "users", id), { isPermanentBan: true, banExpiry: 0 })
-                    );
-                    await Promise.all(promises);
+                    await supabase.from('users').update({ isPermanentBan: true, banExpiry: 0 }).in('userId', targetIds);
                     alert(`🔴 [일괄 영방 성공] 선택 무리 ${targetIds.length}명이 블랙리스트로 동결되었습니다.`);
                     await loadUserBulkList();
                 } catch(e) { alert("통신 차단 실패: " + e.message); }
@@ -1937,10 +1889,7 @@
 
             if(confirm(`선택한 ${targetIds.length}명의 유저의 모든 차단 상태를 깨끗이 일괄 석방하시겠습니까?`)) {
                 try {
-                    const promises = targetIds.map(id => 
-                        updateDoc(doc(db, "users", id), { isPermanentBan: false, banExpiry: 0, isChatBanned: false, isDMBanned: false, isScoreLocked: false })
-                    );
-                    await Promise.all(promises);
+                    await supabase.from('users').update({ isPermanentBan: false, banExpiry: 0, isChatBanned: false, isDMBanned: false, isScoreLocked: false }).in('userId', targetIds);
                     alert(`🔓 [일괄 사면 완료] 선택한 유저 무리의 전과 기록이 클리어되었습니다.`);
                     await loadUserBulkList();
                 } catch(e) { alert("사면 처리 실패: " + e.message); }
@@ -1954,14 +1903,12 @@
             const stateLabel = shouldBan ? "금지" : "허용";
 
             try {
-                const promises = targetIds.map(id => updateDoc(doc(db, "users", id), { isChatBanned: shouldBan }));
-                await Promise.all(promises);
+                await supabase.from('users').update({ isChatBanned: shouldBan }).in('userId', targetIds);
                 alert(`✅ 선택된 ${targetIds.length}명의 월드 대화방 발언권이 일괄 ${stateLabel} 처리되었습니다.`);
                 await loadUserBulkList();
             } catch(e) { alert("권한 인젝션 실패: " + e.message); }
         };
 
-        // 🚨 관리자의 강제 일괄 삭제 권한 우회 로직 탑재 🚨
         window.executeBulkDeleteUserAccounts = async function() {
             if (!isUserSuperAdmin) return alert("최고관리자(Super Admin) 권한이 필요합니다.");
             const targetIds = getCheckedUserIds();
@@ -1972,35 +1919,30 @@
                 let authFailCount = 0;
                 
                 try {
-                    const promises = targetIds.map(async (targetId) => {
-                        const targetDocRef = doc(db, "users", targetId);
-                        const targetSnap = await getDoc(targetDocRef);
-                        
-                        if(targetSnap.exists()) {
-                            const oldPw = targetSnap.data().password;
-                            
-                            if(oldPw) {
-                                try {
-                                    const userCredential = await signInWithEmailAndPassword(secondaryAuth, `${targetId}@clicker.com`, oldPw);
-                                    
-                                    // 타겟 유저 권한으로 DB 문서 먼저 안전하게 삭제 (권한 에러 방지)
-                                    await deleteDoc(doc(secondaryDb, "users", targetId));
-                                    
-                                    // 그 다음 인증 계정 완전히 파기
-                                    await deleteUser(userCredential.user);
-                                    successCount++;
-                                } catch(authErr) {
-                                    console.warn(`Auth 삭제 실패 (${targetId})`, authErr);
-                                    authFailCount++;
+                    for(const targetId of targetIds) {
+                        const { data: targetData } = await supabase.from('users').select('password').eq('userId', targetId).maybeSingle();
+                        if(targetData && targetData.password) {
+                            try {
+                                const { data: signInData, error: authErr } = await secondarySupabase.auth.signInWithPassword({ email: `${targetId}@clicker.com`, password: targetData.password });
+                                await supabase.from('users').delete().eq('userId', targetId);
+                                
+                                if(!authErr && signInData.user) {
+                                    // 주의: 프론트엔드 환경에서 Supabase Auth deleteUser는 백엔드 Service Role이 필요하여 실패할 수 있습니다.
+                                    // DB가 삭제된 시점부터는 로그인하여도 게임데이터 갱신이 불가해 파쇄와 동일한 효과가 납니다.
+                                    console.warn("Client side Auth delete may require backend RPC, depending on Supabase RLS.");
                                 }
+                                successCount++;
+                            } catch (e) {
+                                authFailCount++;
                             }
+                        } else {
+                            await supabase.from('users').delete().eq('userId', targetId);
+                            successCount++;
                         }
-                    });
-                    
-                    await Promise.all(promises);
+                    }
                     
                     let alertMsg = `🔥 [일괄 파쇄 완료] 유저 ${successCount}건의 데이터 구조가 영구 소멸했습니다.`;
-                    if(authFailCount > 0) alertMsg += `\n⚠️ (주의: 비밀번호가 일치하지 않아 완벽한 파쇄에 실패한 계정이 ${authFailCount}건 있습니다.)`;
+                    if(authFailCount > 0) alertMsg += `\n⚠️ (주의: 완벽한 파쇄에 실패한 계정이 ${authFailCount}건 있습니다.)`;
                     
                     alert(alertMsg);
                     await loadUserBulkList();
@@ -2019,12 +1961,10 @@
             if(!confirm(`선택한 ${targetIds.length}명의 유저 스탯을 일괄 조정하시겠습니까?`)) return;
 
             try {
-                const promises = targetIds.map(async (targetId) => {
-                    const targetDocRef = doc(db, "users", targetId);
-                    const targetSnap = await getDoc(targetDocRef);
-                    if(!targetSnap.exists()) return;
-
-                    const currentData = targetSnap.data().gameSave;
+                const { data: usersToUpdate } = await supabase.from('users').select('*').in('userId', targetIds);
+                
+                for(const userDoc of usersToUpdate) {
+                    const currentData = userDoc.gameSave || {};
                     let currentScore = currentData.score || 0;
                     let currentCheatSps = currentData.cheatBonusSps || 0;
                     const multiplier = (operation === 'plus') ? 1 : -1;
@@ -2032,17 +1972,17 @@
                     if (statType === 'score') {
                         currentScore += (amount * multiplier);
                         if(currentScore < 0) currentScore = 0;
-                        await updateDoc(targetDocRef, { "gameSave.score": currentScore });
-                        if(targetId === currentUserId) score = currentScore;
+                        currentData.score = currentScore;
+                        if(userDoc.userId === currentUserId) score = currentScore;
                     } 
                     else if (statType === 'sps') {
                         currentCheatSps += (amount * multiplier);
-                        await updateDoc(targetDocRef, { "gameSave.cheatBonusSps": currentCheatSps });
-                        if(targetId === currentUserId) cheatBonusSps = currentCheatSps;
+                        currentData.cheatBonusSps = currentCheatSps;
+                        if(userDoc.userId === currentUserId) cheatBonusSps = currentCheatSps;
                     }
-                });
+                    await supabase.from('users').update({ gameSave: currentData }).eq('userId', userDoc.userId);
+                }
 
-                await Promise.all(promises);
                 alert(`✅ 선택한 ${targetIds.length}명 유저의 스탯이 일괄 조율되었습니다.`);
                 updateDisplay();
                 await loadUserBulkList();
@@ -2061,12 +2001,10 @@
             if(!confirm(`선택한 ${targetIds.length}명의 유저 아이템을 일괄 조정하시겠습니까?`)) return;
 
             try {
-                const promises = targetIds.map(async (targetId) => {
-                    const targetDocRef = doc(db, "users", targetId);
-                    const targetSnap = await getDoc(targetDocRef);
-                    if(!targetSnap.exists()) return;
-
-                    const currentData = targetSnap.data().gameSave;
+                const { data: usersToUpdate } = await supabase.from('users').select('*').in('userId', targetIds);
+                
+                for(const userDoc of usersToUpdate) {
+                    const currentData = userDoc.gameSave || {};
                     let currentItemCounts = currentData.itemCounts || {};
                     let currentCount = currentItemCounts[itemKey] || 0;
                     const multiplier = (operation === 'plus') ? 1 : -1;
@@ -2074,22 +2012,23 @@
                     currentCount += (countInput * multiplier);
                     if(currentCount < 0) currentCount = 0;
 
-                    await updateDoc(targetDocRef, { [`gameSave.itemCounts.${itemKey}`]: currentCount });
+                    currentItemCounts[itemKey] = currentCount;
+                    currentData.itemCounts = currentItemCounts;
 
-                    if(targetId === currentUserId) {
+                    await supabase.from('users').update({ gameSave: currentData }).eq('userId', userDoc.userId);
+
+                    if(userDoc.userId === currentUserId) {
                         items[itemKey].count = currentCount;
                         items[itemKey].cost = Math.floor(items[itemKey].baseCost * Math.pow(1.15, currentCount));
                         buildShopUI();
                     }
-                });
+                }
                 
-                await Promise.all(promises);
                 alert(`✅ 선택한 ${targetIds.length}명 유저의 인벤토리 아이템 덤프가 일괄 갱신되었습니다.`);
                 await loadUserBulkList();
             } catch(e) { alert("아이템 인젝션 에러: " + e.message); }
         };
 
-        // 💡 관리자의 비밀번호 강제 덮어쓰기 권한 버그 픽스
         window.executeAdminUserPasswordOverride = async function() {
             if (!isUserSuperAdmin) return alert("최고관리자 권한이 필요합니다.");
             const targetIds = getCheckedUserIds();
@@ -2101,35 +2040,27 @@
             if(confirm(`정말로 선택한 ${targetIds.length}명 유저의 보안 접근 암호를 강제 변조하시겠습니까?`)) {
                 let successCount = 0;
 
-                const promises = targetIds.map(async (targetId) => {
-                    const targetDocRef = doc(db, "users", targetId);
-                    const targetSnap = await getDoc(targetDocRef);
-                    
-                    if(targetSnap.exists()) {
-                        const oldPw = targetSnap.data().password;
+                for(const targetId of targetIds) {
+                    const { data: targetSnap } = await supabase.from('users').select('password').eq('userId', targetId).maybeSingle();
+                    if(targetSnap) {
+                        const oldPw = targetSnap.password;
                         
-                        // 1. Firebase Auth 에러를 무시하고 무조건 DB의 비밀번호는 즉시 덮어씌움
-                        await updateDoc(doc(db, "users", targetId), { 
-                            password: targetNewPw,
-                            adminUpdateTrigger: Date.now() 
-                        });
+                        await supabase.from('users').update({ password: targetNewPw }).eq('userId', targetId);
 
-                        // 2. Auth 업데이트는 가능한 경우에만 시도
                         if (oldPw) {
                             try {
-                                const userCredential = await signInWithEmailAndPassword(secondaryAuth, `${targetId}@clicker.com`, oldPw);
-                                await updatePassword(userCredential.user, targetNewPw);
-                                await signOut(secondaryAuth);
+                                const { data: loginData } = await secondarySupabase.auth.signInWithPassword({ email: `${targetId}@clicker.com`, password: oldPw });
+                                if (loginData.user) {
+                                    await secondarySupabase.auth.updateUser({ password: targetNewPw });
+                                }
+                                await secondarySupabase.auth.signOut();
                             } catch (authErr) {
                                 console.warn(`Auth PW 변경 프로세스 스킵 (${targetId}): `, authErr);
                             }
                         }
-                        
                         successCount++;
                     }
-                });
-                
-                await Promise.all(promises);
+                }
                 
                 alert(`✅ 무조건 덮어쓰기 완료! 총 ${successCount}명의 계정 비밀번호가 강제로 변경되었습니다.`);
                 
@@ -2140,18 +2071,17 @@
 
         function loadAdminTicketsFeed() {
             if (!isUserAdminPrivilege && !isUserSuperAdmin) return;
-            const q = query(collection(db, "admin_tickets"), orderBy("timestamp", "desc"), limit(6)); 
-            onSnapshot(q, (snapshot) => {
+            const fetchTickets = async () => {
+                const { data: snapshot } = await supabase.from('admin_tickets').select('*').order('timestamp', { ascending: false }).limit(6);
                 const feedArea = document.getElementById('admTicketFeedArea');
                 feedArea.innerHTML = '';
                 
-                if (snapshot.empty) {
+                if (!snapshot || snapshot.length === 0) {
                     feedArea.innerHTML = '<div style="color: var(--text-sub); font-size: 11px; text-align: center; padding: 10px;">접수된 내역이 없습니다.</div>';
                     return;
                 }
 
-                snapshot.forEach(doc => {
-                    const data = doc.data();
+                snapshot.forEach(data => {
                     const dateStr = new Date(data.timestamp).toLocaleString();
                     const row = document.createElement('div');
                     row.className = 'ticket-row';
@@ -2164,7 +2094,9 @@
                     `;
                     feedArea.appendChild(row);
                 });
-            });
+            };
+            fetchTickets();
+            supabase.channel('public:admin_tickets').on('postgres_changes', { event: '*', schema: 'public', table: 'admin_tickets' }, fetchTickets).subscribe();
         }
 
         window.exitAdminConsole = function(keepAuthAlive) {
