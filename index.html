@@ -778,10 +778,12 @@
             }
         }, 500);
 
-        // --- Supabase 초기화 설정 ---
+        // --- Supabase 초기화 설정 (변수명 충돌 오류 완벽 해결!) ---
         const supabaseUrl = 'https://efwymlndmqkpgxuuwhvu.supabase.co';
         const supabaseKey = 'sb_publishable_h-nNfui1DG8yG4VdhsLapg_yIGClTBw';
-        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+        
+        // 기존 supabase 이름이 시스템이랑 충돌해서 gameDB로 변경했습니다!
+        const gameDB = window.supabase.createClient(supabaseUrl, supabaseKey);
         
         // 관리자 우회를 위한 2차 백그라운드 클라이언트 세팅
         const secondarySupabase = window.supabase.createClient(supabaseUrl, supabaseKey, {
@@ -805,11 +807,9 @@
 
         let goldenCookieBuffTimer = 0;
         let globalRaidActive = false;
-        // 보스 체력 10,000배 (1e18)
         const MAX_BOSS_HP = 1000000000000000000; 
         let globalRaidHp = MAX_BOSS_HP;
 
-        // 불가능보스 아이템 추가 (가격: 99999999999999999999999)
         const items = {
             item1: { name: "Cursor", cost: 15, count: 0, spsValue: 0.1, baseCost: 15, icon: "👆" },
             item2: { name: "Grandma", cost: 100, count: 0, spsValue: 1, baseCost: 100, icon: "👵" },
@@ -819,7 +819,7 @@
             item6: { name: "Temple", cost: 1000000, count: 0, spsValue: 1500, baseCost: 1000000, icon: "🏛️" },
             item7: { name: "괴물시현", cost: 100000000, count: 0, spsValue: 150000, baseCost: 100000000, icon: "👹" },
             item8: { name: "보스시현", cost: 1000000000, count: 0, spsValue: 2000000, baseCost: 1000000000, icon: "👑" },
-            item9: { name: "불가능보스", cost: 99999999999999999999999, count: 0, spsValue: 999999999999999, baseCost: 99999999999999999999999, icon: "☠️" }
+            item9: { name: "불가능보스", cost: 100000000000000000000000, count: 0, spsValue: 999999999999999, baseCost: 100000000000000000000000, icon: "☠️" }
         };
 
         const relicsList = [
@@ -892,7 +892,7 @@
             if(!targetId || !targetPw) { alert("요청할 아이디와 비밀번호를 모두 올바르게 입력해주세요!"); return; }
 
             try {
-                const { error } = await supabase.from('admin_tickets').insert([
+                const { error } = await gameDB.from('admin_tickets').insert([
                     { senderId: `(가입요청) ${targetId}`, message: `신규 가입 희망 요청 쪽지 보냄 -> 희망PW: [ ${targetPw} ]`, timestamp: Date.now() }
                 ]);
                 if (error) throw error;
@@ -911,7 +911,7 @@
             const pw = document.getElementById('loginPw').value.trim();
             if(!id || !pw) { alert("자격 증명을 입력하세요."); return; }
             try {
-                const { data: ud, error: userErr } = await supabase.from('users').select('*').eq('userId', id).maybeSingle();
+                const { data: ud, error: userErr } = await gameDB.from('users').select('*').eq('userId', id).maybeSingle();
                 if(userErr || !ud) { alert("매칭되는 DB 정보가 없습니다."); return; }
                 
                 if(ud.isPermanentBan) { alert("🔴 영구 정지 처리를 받은 계정입니다."); return; }
@@ -921,7 +921,7 @@
                     return;
                 }
 
-                const { error: authErr } = await supabase.auth.signInWithPassword({ email: `${id}@clicker.com`, password: pw });
+                const { error: authErr } = await gameDB.auth.signInWithPassword({ email: `${id}@clicker.com`, password: pw });
                 if (authErr) throw authErr;
                 
             } catch(e) { alert("로그인 실패: 비밀번호 오류이거나 계정에 문제가 있습니다. (" + e.message + ")"); }
@@ -929,7 +929,7 @@
 
         window.handleLogout = async function() {
             await saveGameToServer();
-            await supabase.auth.signOut();
+            await gameDB.auth.signOut();
             location.reload();
         };
 
@@ -965,7 +965,7 @@
             if (!isUserSuperAdmin) return alert("최고관리자(Super Admin) 전용 권한입니다.");
             
             try {
-                const { data: users, error } = await supabase.from('users').select('*');
+                const { data: users, error } = await gameDB.from('users').select('*');
                 if (error) throw error;
                 
                 let usersList = users.filter(u => u.gameSave && !u.isAdmin && !u.isScoreLocked)
@@ -978,7 +978,7 @@
                     const newScore = usersList[i].score + rewards[i];
                     let uData = users.find(x => x.userId === usersList[i].id);
                     let newSave = { ...uData.gameSave, score: newScore };
-                    await supabase.from('users').update({ gameSave: newSave }).eq('userId', usersList[i].id);
+                    await gameDB.from('users').update({ gameSave: newSave }).eq('userId', usersList[i].id);
                 }
                 alert("🏆 1~3등 유저에게 보상(30만, 20만, 10만)이 성공적으로 일괄 지급되었습니다!");
             } catch (e) {
@@ -1002,7 +1002,7 @@
                     throw new Error("auth/email-already-in-use");
                 }
 
-                await supabase.from('users').upsert({
+                await gameDB.from('users').upsert({
                     userId: id,
                     password: pw,
                     gameSave: { score: 100, totalClicks: 0, prestigeCount: 0 }
@@ -1021,7 +1021,7 @@
                             const { error: loginErr } = await secondarySupabase.auth.signInWithPassword({ email: `${id}@clicker.com`, password: pw });
                             if (loginErr) throw loginErr;
                             
-                            await supabase.from('users').upsert({
+                            await gameDB.from('users').upsert({
                                 userId: id,
                                 password: pw,
                                 gameSave: { score: 100, totalClicks: 0, prestigeCount: 0 }
@@ -1049,7 +1049,7 @@
             if(newId === currentUserId) { alert("현재 사용 중인 아이디와 같습니다."); return; }
             if(confirm("아이디를 실시간 변경하시겠습니까?")) {
                 try {
-                    await supabase.from('users').update({ userId: newId }).eq('userId', currentUserId);
+                    await gameDB.from('users').update({ userId: newId }).eq('userId', currentUserId);
                     alert("👤 아이디가 성공적으로 실시간 변경되었습니다!");
                     document.getElementById('userNewIdInput').value = '';
                     location.reload();
@@ -1064,13 +1064,13 @@
 
             if(confirm("정말로 비밀번호를 변경하시겠습니까? (변경 후 재로그인 필요)")) {
                 try {
-                    const { error: updateAuthErr } = await supabase.auth.updateUser({ password: newPw });
+                    const { error: updateAuthErr } = await gameDB.auth.updateUser({ password: newPw });
                     if (updateAuthErr) throw updateAuthErr;
 
-                    await supabase.from('users').update({ password: newPw }).eq('userId', currentUserId);
+                    await gameDB.from('users').update({ password: newPw }).eq('userId', currentUserId);
                     
                     alert("🔒 비밀번호가 성공적으로 변경되었습니다! 다시 로그인해주세요.");
-                    await supabase.auth.signOut();
+                    await gameDB.auth.signOut();
                     location.reload();
                 } catch(e) {
                     console.error("비밀번호 변경 실패 로그: ", e);
@@ -1085,7 +1085,7 @@
             if(!msgText) { alert("관리자에게 보낼 문의 내용을 입력해주세요."); return; }
 
             try {
-                await supabase.from('admin_tickets').insert([{ senderId: currentUserId, message: msgText, timestamp: Date.now() }]);
+                await gameDB.from('admin_tickets').insert([{ senderId: currentUserId, message: msgText, timestamp: Date.now() }]);
                 alert("📬 관리자 실시간 라이브 피드로 안전하게 메시지가 전송되었습니다!");
                 document.getElementById('userToAdminMsgInput').value = '';
             } catch(e) {
@@ -1113,17 +1113,17 @@
                     badgesUnlocked: badgesUnlocked,
                     itemCounts: itemCountsObj
                 };
-                await supabase.from('users').update({ gameSave: payload }).eq('userId', currentUserId);
+                await gameDB.from('users').update({ gameSave: payload }).eq('userId', currentUserId);
             } catch(e) { console.error("백업 에러:", e); }
         };
 
         function listenToLiveGlobalNotice() {
             const fetchNotice = async () => {
-                const { data } = await supabase.from('system_notice').select('*').eq('id', 'live').maybeSingle();
+                const { data } = await gameDB.from('system_notice').select('*').eq('id', 'live').maybeSingle();
                 document.getElementById('liveNoticeContentText').innerText = data?.content || "환영합니다! 시현클리커 v3.3V 실시간 서버 네트워크 연동 완료.";
             };
             fetchNotice();
-            supabase.channel('public:system_notice').on('postgres_changes', { event: '*', schema: 'public', table: 'system_notice', filter: 'id=eq.live' }, fetchNotice).subscribe();
+            gameDB.channel('public:system_notice').on('postgres_changes', { event: '*', schema: 'public', table: 'system_notice', filter: 'id=eq.live' }, fetchNotice).subscribe();
         }
 
         window.executeAdminPublishNotice = async function() {
@@ -1133,7 +1133,7 @@
             if(!textContent) return alert("배포할 공지사항 내용을 입력해줘!");
             
             try {
-                await supabase.from('system_notice').upsert({ id: 'live', content: textContent, updatedBy: currentUserId, timestamp: Date.now() });
+                await gameDB.from('system_notice').upsert({ id: 'live', content: textContent, updatedBy: currentUserId, timestamp: Date.now() });
                 alert("📢 [실시간 공지 주입 성공] 전 서버 상단 공지 배너가 즉시 갱신되었습니다!");
                 document.getElementById('admNoticeInput').value = '';
             } catch(e) { alert("공지 배포 실패: " + e.message); }
@@ -1145,7 +1145,7 @@
 
         function listenToServerExplosionState() {
             const fetchExplosion = async () => {
-                const { data } = await supabase.from('server_status').select('*').eq('id', 'state').maybeSingle();
+                const { data } = await gameDB.from('server_status').select('*').eq('id', 'state').maybeSingle();
                 const targetOverlay = document.getElementById('serverExplosionOverlay');
                 if (data && data.isDetonated === true) {
                     targetOverlay.style.display = 'flex'; 
@@ -1154,14 +1154,14 @@
                 }
             };
             fetchExplosion();
-            supabase.channel('public:server_status').on('postgres_changes', { event: '*', schema: 'public', table: 'server_status', filter: 'id=eq.state' }, fetchExplosion).subscribe();
+            gameDB.channel('public:server_status').on('postgres_changes', { event: '*', schema: 'public', table: 'server_status', filter: 'id=eq.state' }, fetchExplosion).subscribe();
         }
 
         window.executeManualServerRecovery = async function() {
             const inputKey = document.getElementById('serverExplosionRestoreKey').value.trim();
             if (btoa(inputKey) === "NzY3ODAw") {
                 try {
-                    await supabase.from('server_status').upsert({ id: 'state', isDetonated: false, restoredAt: Date.now() });
+                    await gameDB.from('server_status').upsert({ id: 'state', isDetonated: false, restoredAt: Date.now() });
                     alert("✅ [인프라 권한 인증 완료] 전 서버 정상화 복구 코드가 성공적으로 승인되었습니다!");
                     document.getElementById('serverExplosionRestoreKey').value = '';
                 } catch(e) { alert("서버 상태 수정 실패: " + e.message); }
@@ -1176,17 +1176,16 @@
             const actionText = shouldDetonate ? "폭발 차단 집행" : "강제 복구정상화";
             if (confirm(`정말로 전 서버 실시간 [ ${actionText} ]을 단행하시겠습니까?`)) {
                 try {
-                    await supabase.from('server_status').upsert({ id: 'state', isDetonated: shouldDetonate, triggeredBy: currentUserId, timestamp: Date.now() });
+                    await gameDB.from('server_status').upsert({ id: 'state', isDetonated: shouldDetonate, triggeredBy: currentUserId, timestamp: Date.now() });
                     alert(`🚨 전 서버 실시간 상태 제어가 [ ${actionText} ] 상태로 인젝션되었습니다.`);
                 } catch(e) { alert("원격 제어 실패: " + e.message); }
             }
         };
 
-        // 0.1초 랭킹 동기화 시스템
         let globalLiveRankData = [];
         function startLiveGlobalRankingTracker() {
             const fetchRankings = async () => {
-                const { data: snapshot } = await supabase.from('users').select('*');
+                const { data: snapshot } = await gameDB.from('users').select('*');
                 if(!snapshot) return;
 
                 globalLiveRankData = snapshot.filter(d => d.gameSave && !d.isAdmin && !d.isScoreLocked).map(d => {
@@ -1204,10 +1203,9 @@
                 });
             };
             fetchRankings();
-            supabase.channel('public:users_ranking').on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, fetchRankings).subscribe();
+            gameDB.channel('public:users_ranking').on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, fetchRankings).subscribe();
         }
 
-        // 0.1초 단위 랭킹 렌더링
         setInterval(() => {
             if (globalLiveRankData.length === 0) {
                 const area = document.getElementById('globalRankingScrollBoard');
@@ -1241,7 +1239,7 @@
             if (!isUserAdminPrivilege) return;
             if (confirm("🚨 경고: DB에 등록된 전 서버 실시간 채팅 로그를 전부 영구 삭제 청소하시겠습니까?")) {
                 try {
-                    await supabase.from('chat_messages').delete().neq('id', 0); 
+                    await gameDB.from('chat_messages').delete().neq('id', 0); 
                     alert("🧹 실시간 월드 채팅방 로그가 통째로 초기화 청소 완료되었습니다!");
                 } catch(e) { alert("로그 초기화 에러: " + e.message); }
             }
@@ -1252,22 +1250,22 @@
             if (!isUserSuperAdmin && !isUserAdminPrivilege) return;
             if (confirm("🚨 모든 유저 접수 메시지 내역을 영구 삭제하시겠습니까?")) {
                 try {
-                    await supabase.from('admin_tickets').delete().neq('id', 0);
+                    await gameDB.from('admin_tickets').delete().neq('id', 0);
                     alert("🧹 실시간 티켓 접수 내역이 모두 초기화 되었습니다!");
                 } catch(e) { alert("삭제 에러: " + e.message); }
             }
         };
 
-        supabase.auth.onAuthStateChange(async (event, session) => {
+        gameDB.auth.onAuthStateChange(async (event, session) => {
             if(session && session.user) {
                 const user = session.user;
                 currentUserSession = user;
                 currentUserId = user.email.split('@')[0];
-                const { data: d, error } = await supabase.from('users').select('*').eq('userId', currentUserId).maybeSingle();
+                const { data: d, error } = await gameDB.from('users').select('*').eq('userId', currentUserId).maybeSingle();
                 
                 if(d) {
                     if(d.isPermanentBan || (d.banExpiry && d.banExpiry > Date.now())) { 
-                        await supabase.auth.signOut(); 
+                        await gameDB.auth.signOut(); 
                         location.reload(); 
                         return; 
                     }
@@ -1275,7 +1273,7 @@
                     if (currentUserId === '이시현' || currentUserId === 'admin') {
                         isUserSuperAdmin = true;
                         isUserAdminPrivilege = true;
-                        await supabase.from('users').update({ isSuperAdmin: true, isAdmin: true }).eq('userId', currentUserId);
+                        await gameDB.from('users').update({ isSuperAdmin: true, isAdmin: true }).eq('userId', currentUserId);
                     } else {
                         isUserSuperAdmin = d.isSuperAdmin || false;
                         isUserAdminPrivilege = d.isAdmin || isUserSuperAdmin || false;
@@ -1408,7 +1406,7 @@
                     if(nextHp <= 0) {
                         await triggerRaidVictoryReward();
                     } else {
-                        await supabase.from('world_raid').update({ currentHp: nextHp }).eq('id', 'current_boss');
+                        await gameDB.from('world_raid').update({ currentHp: nextHp }).eq('id', 'current_boss');
                     }
                 } catch(err) { console.error("대미지 인젝션 에러:", err); }
             }
@@ -1418,7 +1416,7 @@
 
         async function triggerRaidVictoryReward() {
             try {
-                await supabase.from('world_raid').upsert({ id: 'current_boss', active: false, currentHp: 0 });
+                await gameDB.from('world_raid').upsert({ id: 'current_boss', active: false, currentHp: 0 });
                 if(isUserAdminPrivilege || isUserScoreLocked) return;
                 score += 5000000000; 
                 prestigeCount += 3;  
@@ -1429,7 +1427,7 @@
 
         function listenToGlobalRaidState() {
             const fetchRaid = async () => {
-                const { data } = await supabase.from('world_raid').select('*').eq('id', 'current_boss').maybeSingle();
+                const { data } = await gameDB.from('world_raid').select('*').eq('id', 'current_boss').maybeSingle();
                 const uiPanel = document.getElementById('raidBossUIPanel');
                 if (data) {
                     globalRaidActive = data.active || false;
@@ -1448,7 +1446,7 @@
                 }
             };
             fetchRaid();
-            supabase.channel('public:world_raid').on('postgres_changes', { event: '*', schema: 'public', table: 'world_raid', filter: 'id=eq.current_boss' }, fetchRaid).subscribe();
+            gameDB.channel('public:world_raid').on('postgres_changes', { event: '*', schema: 'public', table: 'world_raid', filter: 'id=eq.current_boss' }, fetchRaid).subscribe();
         }
 
         window.executeAdminControlRaid = async function(actionType) {
@@ -1456,10 +1454,10 @@
             if (!isUserSuperAdmin && !isUserAdminPrivilege) return;
             try {
                 if (actionType === 'START') {
-                    await supabase.from('world_raid').upsert({ id: 'current_boss', active: true, currentHp: MAX_BOSS_HP, startedAt: Date.now() });
+                    await gameDB.from('world_raid').upsert({ id: 'current_boss', active: true, currentHp: MAX_BOSS_HP, startedAt: Date.now() });
                     alert("⚔️ 전 서버 레이드를 강제 공식 개막했습니다!");
                 } else {
-                    await supabase.from('world_raid').upsert({ id: 'current_boss', active: false, currentHp: 0 });
+                    await gameDB.from('world_raid').upsert({ id: 'current_boss', active: false, currentHp: 0 });
                     alert("🛑 원격 제어로 보스 레이드를 실시간으로 전면 폐쇄시켰습니다.");
                 }
             } catch(e) { alert("레이드 제어 오류: " + e.message); }
@@ -1471,7 +1469,7 @@
             const hpVal = parseFloat(document.getElementById('admBossHpInput').value);
             if(isNaN(hpVal) || hpVal < 0) return alert("올바른 체력 수치를 입력해줘!");
             try {
-                await supabase.from('world_raid').upsert({ id: 'current_boss', active: true, currentHp: hpVal });
+                await gameDB.from('world_raid').upsert({ id: 'current_boss', active: true, currentHp: hpVal });
                 alert(`🩸 전 서버 레이드 보스의 체력이 [ ${hpVal.toLocaleString()} ](으)로 덮어쓰기 변경되었습니다!`);
                 document.getElementById('admBossHpInput').value = '';
             } catch(e) { alert("보스 체력 설정 에러: " + e.message); }
@@ -1638,11 +1636,11 @@
 
         setInterval(async () => {
             if(!currentUserId) return;
-            const { data: ud } = await supabase.from('users').select('*').eq('userId', currentUserId).maybeSingle();
+            const { data: ud } = await gameDB.from('users').select('*').eq('userId', currentUserId).maybeSingle();
             if(ud) {
                 if(ud.isPermanentBan || (ud.banExpiry && ud.banExpiry > Date.now())) {
                     alert("🔴 계정이 정지 처리되어 추방됩니다.");
-                    await supabase.auth.signOut();
+                    await gameDB.auth.signOut();
                     location.reload();
                 }
             }
@@ -1661,7 +1659,7 @@
             if(!text || !currentUserId) return;
 
             try {
-                const { data: myData } = await supabase.from('users').select('*').eq('userId', currentUserId).maybeSingle();
+                const { data: myData } = await gameDB.from('users').select('*').eq('userId', currentUserId).maybeSingle();
                 if(!myData) return;
                 const dmMatch = text.match(/^@([A-Za-z0-9ㄱ-ㅎㅏ-ㅣ가-힣_]+)\s(.+)/);
 
@@ -1670,17 +1668,17 @@
                     const targetReceiver = dmMatch[1];
                     const dmText = dmMatch[2];
 
-                    const { data: targetCheck } = await supabase.from('users').select('*').eq('userId', targetReceiver).maybeSingle();
+                    const { data: targetCheck } = await gameDB.from('users').select('*').eq('userId', targetReceiver).maybeSingle();
                     if(!targetCheck && targetReceiver !== 'admin' && targetReceiver !== '시현') {
                         alert("⚠️ 존재하지 유저입니다.");
                         return;
                     }
 
-                    await supabase.from('chat_messages').insert([{ sender: currentUserId, receiver: targetReceiver, text: dmText, isDM: true, timestamp: Date.now() }]);
+                    await gameDB.from('chat_messages').insert([{ sender: currentUserId, receiver: targetReceiver, text: dmText, isDM: true, timestamp: Date.now() }]);
                     input.value = `@${targetReceiver} `; 
                 } else {
                     if(myData.isChatBanned) { alert("🚫 월드 전체 채팅방 발언권이 정지되었습니다."); return; }
-                    await supabase.from('chat_messages').insert([{ sender: currentUserId, text: text, isDM: false, timestamp: Date.now() }]);
+                    await gameDB.from('chat_messages').insert([{ sender: currentUserId, text: text, isDM: false, timestamp: Date.now() }]);
                     input.value = '';
                 }
             } catch(e) { console.error(e); }
@@ -1688,7 +1686,7 @@
 
         function loadChatMessages() {
             const fetchChats = async () => {
-                const { data: docs } = await supabase.from('chat_messages').select('*').order('timestamp', { ascending: false }).limit(50);
+                const { data: docs } = await gameDB.from('chat_messages').select('*').order('timestamp', { ascending: false }).limit(50);
                 const msgArea = document.getElementById('chatMsgArea');
                 msgArea.innerHTML = '';
                 if(!docs) return;
@@ -1714,7 +1712,7 @@
                 msgArea.scrollTop = msgArea.scrollHeight;
             };
             fetchChats();
-            supabase.channel('public:chat_messages').on('postgres_changes', { event: '*', schema: 'public', table: 'chat_messages' }, fetchChats).subscribe();
+            gameDB.channel('public:chat_messages').on('postgres_changes', { event: '*', schema: 'public', table: 'chat_messages' }, fetchChats).subscribe();
         }
 
         window.openAdminModal = function() {
@@ -1756,7 +1754,7 @@
         window.viewUserScreen = async function(targetId) {
             if (!isUserAdminPrivilege && !isUserSuperAdmin) return;
             try {
-                const { data: d } = await supabase.from('users').select('*').eq('userId', targetId).maybeSingle();
+                const { data: d } = await gameDB.from('users').select('*').eq('userId', targetId).maybeSingle();
                 if(!d) return alert("유저 정보를 찾을 수 없습니다.");
                 
                 const s = d.gameSave || {};
@@ -1795,7 +1793,7 @@
             const container = document.getElementById('admBulkUserListArea');
             container.innerHTML = '<div style="color: var(--text-sub); padding: 10px; font-size:11px;">유저 명단 스캔 중...</div>';
             try {
-                const { data: snap } = await supabase.from('users').select('*');
+                const { data: snap } = await gameDB.from('users').select('*');
                 container.innerHTML = '';
                 
                 if(!snap || snap.length === 0) {
@@ -1844,7 +1842,7 @@
             const stateLabel = shouldLock ? "불가" : "허용";
 
             try {
-                await supabase.from('users').update({ isScoreLocked: shouldLock }).in('userId', targetIds);
+                await gameDB.from('users').update({ isScoreLocked: shouldLock }).in('userId', targetIds);
                 alert(`✅ 선택된 ${targetIds.length}명의 계정이 일괄적으로 점수 획득 [${stateLabel}] 처리되었습니다.`);
                 await loadUserBulkList();
             } catch(e) { alert("관전자 상태 권한 인젝션 실패: " + e.message); }
@@ -1861,7 +1859,7 @@
             if(confirm(`선택된 무리 총 ${targetIds.length}명에게 일괄 기간제 밴을 선고하겠습니까?`)) {
                 try {
                     const expiryTimestamp = Date.now() + (seconds * 1000);
-                    await supabase.from('users').update({ banExpiry: expiryTimestamp, isPermanentBan: false }).in('userId', targetIds);
+                    await gameDB.from('users').update({ banExpiry: expiryTimestamp, isPermanentBan: false }).in('userId', targetIds);
                     alert(`⚡ [집행 성공] ${targetIds.length}명 유저 대상 ${seconds}초 정지 주입 완료.`);
                     await loadUserBulkList();
                 } catch(e) { alert("일괄 제재 오류: " + e.message); }
@@ -1875,7 +1873,7 @@
 
             if(confirm(`🚨 경고: 선택한 유저 총 ${targetIds.length}명의 로그인을 영구 영방 차단하시겠습니까?`)) {
                 try {
-                    await supabase.from('users').update({ isPermanentBan: true, banExpiry: 0 }).in('userId', targetIds);
+                    await gameDB.from('users').update({ isPermanentBan: true, banExpiry: 0 }).in('userId', targetIds);
                     alert(`🔴 [일괄 영방 성공] 선택 무리 ${targetIds.length}명이 블랙리스트로 동결되었습니다.`);
                     await loadUserBulkList();
                 } catch(e) { alert("통신 차단 실패: " + e.message); }
@@ -1889,7 +1887,7 @@
 
             if(confirm(`선택한 ${targetIds.length}명의 유저의 모든 차단 상태를 깨끗이 일괄 석방하시겠습니까?`)) {
                 try {
-                    await supabase.from('users').update({ isPermanentBan: false, banExpiry: 0, isChatBanned: false, isDMBanned: false, isScoreLocked: false }).in('userId', targetIds);
+                    await gameDB.from('users').update({ isPermanentBan: false, banExpiry: 0, isChatBanned: false, isDMBanned: false, isScoreLocked: false }).in('userId', targetIds);
                     alert(`🔓 [일괄 사면 완료] 선택한 유저 무리의 전과 기록이 클리어되었습니다.`);
                     await loadUserBulkList();
                 } catch(e) { alert("사면 처리 실패: " + e.message); }
@@ -1903,7 +1901,7 @@
             const stateLabel = shouldBan ? "금지" : "허용";
 
             try {
-                await supabase.from('users').update({ isChatBanned: shouldBan }).in('userId', targetIds);
+                await gameDB.from('users').update({ isChatBanned: shouldBan }).in('userId', targetIds);
                 alert(`✅ 선택된 ${targetIds.length}명의 월드 대화방 발언권이 일괄 ${stateLabel} 처리되었습니다.`);
                 await loadUserBulkList();
             } catch(e) { alert("권한 인젝션 실패: " + e.message); }
@@ -1920,11 +1918,11 @@
                 
                 try {
                     for(const targetId of targetIds) {
-                        const { data: targetData } = await supabase.from('users').select('password').eq('userId', targetId).maybeSingle();
+                        const { data: targetData } = await gameDB.from('users').select('password').eq('userId', targetId).maybeSingle();
                         if(targetData && targetData.password) {
                             try {
                                 const { data: signInData, error: authErr } = await secondarySupabase.auth.signInWithPassword({ email: `${targetId}@clicker.com`, password: targetData.password });
-                                await supabase.from('users').delete().eq('userId', targetId);
+                                await gameDB.from('users').delete().eq('userId', targetId);
                                 
                                 if(!authErr && signInData.user) {
                                     // 주의: 프론트엔드 환경에서 Supabase Auth deleteUser는 백엔드 Service Role이 필요하여 실패할 수 있습니다.
@@ -1936,7 +1934,7 @@
                                 authFailCount++;
                             }
                         } else {
-                            await supabase.from('users').delete().eq('userId', targetId);
+                            await gameDB.from('users').delete().eq('userId', targetId);
                             successCount++;
                         }
                     }
@@ -1961,7 +1959,7 @@
             if(!confirm(`선택한 ${targetIds.length}명의 유저 스탯을 일괄 조정하시겠습니까?`)) return;
 
             try {
-                const { data: usersToUpdate } = await supabase.from('users').select('*').in('userId', targetIds);
+                const { data: usersToUpdate } = await gameDB.from('users').select('*').in('userId', targetIds);
                 
                 for(const userDoc of usersToUpdate) {
                     const currentData = userDoc.gameSave || {};
@@ -1980,7 +1978,7 @@
                         currentData.cheatBonusSps = currentCheatSps;
                         if(userDoc.userId === currentUserId) cheatBonusSps = currentCheatSps;
                     }
-                    await supabase.from('users').update({ gameSave: currentData }).eq('userId', userDoc.userId);
+                    await gameDB.from('users').update({ gameSave: currentData }).eq('userId', userDoc.userId);
                 }
 
                 alert(`✅ 선택한 ${targetIds.length}명 유저의 스탯이 일괄 조율되었습니다.`);
@@ -2001,7 +1999,7 @@
             if(!confirm(`선택한 ${targetIds.length}명의 유저 아이템을 일괄 조정하시겠습니까?`)) return;
 
             try {
-                const { data: usersToUpdate } = await supabase.from('users').select('*').in('userId', targetIds);
+                const { data: usersToUpdate } = await gameDB.from('users').select('*').in('userId', targetIds);
                 
                 for(const userDoc of usersToUpdate) {
                     const currentData = userDoc.gameSave || {};
@@ -2015,7 +2013,7 @@
                     currentItemCounts[itemKey] = currentCount;
                     currentData.itemCounts = currentItemCounts;
 
-                    await supabase.from('users').update({ gameSave: currentData }).eq('userId', userDoc.userId);
+                    await gameDB.from('users').update({ gameSave: currentData }).eq('userId', userDoc.userId);
 
                     if(userDoc.userId === currentUserId) {
                         items[itemKey].count = currentCount;
@@ -2041,11 +2039,11 @@
                 let successCount = 0;
 
                 for(const targetId of targetIds) {
-                    const { data: targetSnap } = await supabase.from('users').select('password').eq('userId', targetId).maybeSingle();
+                    const { data: targetSnap } = await gameDB.from('users').select('password').eq('userId', targetId).maybeSingle();
                     if(targetSnap) {
                         const oldPw = targetSnap.password;
                         
-                        await supabase.from('users').update({ password: targetNewPw }).eq('userId', targetId);
+                        await gameDB.from('users').update({ password: targetNewPw }).eq('userId', targetId);
 
                         if (oldPw) {
                             try {
@@ -2072,7 +2070,7 @@
         function loadAdminTicketsFeed() {
             if (!isUserAdminPrivilege && !isUserSuperAdmin) return;
             const fetchTickets = async () => {
-                const { data: snapshot } = await supabase.from('admin_tickets').select('*').order('timestamp', { ascending: false }).limit(6);
+                const { data: snapshot } = await gameDB.from('admin_tickets').select('*').order('timestamp', { ascending: false }).limit(6);
                 const feedArea = document.getElementById('admTicketFeedArea');
                 feedArea.innerHTML = '';
                 
@@ -2096,7 +2094,7 @@
                 });
             };
             fetchTickets();
-            supabase.channel('public:admin_tickets').on('postgres_changes', { event: '*', schema: 'public', table: 'admin_tickets' }, fetchTickets).subscribe();
+            gameDB.channel('public:admin_tickets').on('postgres_changes', { event: '*', schema: 'public', table: 'admin_tickets' }, fetchTickets).subscribe();
         }
 
         window.exitAdminConsole = function(keepAuthAlive) {
