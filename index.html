@@ -159,9 +159,6 @@
             width: 100%; background-color: #00ffcc; color: #000000; border: none;
             padding: 14px; font-size: 16px; font-weight: bold; border-radius: 5px; cursor: pointer;
         }
-        .auth-btn:disabled {
-            background-color: #555555; color: #888888; cursor: not-allowed;
-        }
 
         #serverExplosionOverlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -400,7 +397,7 @@
 
     <div id="serverExplosionOverlay">
         <div class="explosion-title">🚨 SERVER CRITICAL DETONATED 🚨</div>
-        <div class="explosion-desc">관리자에 의해 전 서버가 임시 폐쇄 및 폭발 상태로 제어되었습니다.<br>복구 암호 승인이 떨어질 때 허가되지 않은 접근은 전면 동결 처리됩니다.</div>
+        <div class="explosion-desc">관리자에 의해 전 서버가 임시 폐쇄 및 폭발 상태로 제어되었습니다.<br>복구 암호 승인이 떨어질 때까지 허가되지 않은 접근은 전면 동결 처리됩니다.</div>
         <div class="explosion-restore-box">
             <input type="password" id="serverExplosionRestoreKey" placeholder="ENTER RESTORE KEY">
             <button class="explosion-restore-btn" onclick="executeManualServerRecovery()">서버 인프라 복구 승인</button>
@@ -416,22 +413,22 @@
         <div class="auth-container">
             <div class="auth-tab-buttons">
                 <button class="auth-tab active" id="tabLoginHead" onclick="switchAuthTab('login')">로그인</button>
-                <button class="auth-tab" id="tabReqHead" onclick="switchAuthTab('ticket')">회원가입요청</button>
+                <button class="auth-tab" id="tabReqHead" onclick="switchAuthTab('ticket')">가입요청</button>
             </div>
 
             <div id="loginForm" class="auth-form active">
                 <div class="auth-input-group">
-                    <label>아이디</label>
-                    <input type="text" id="loginId" autocomplete="off" placeholder="ex: 유저아이디">
+                    <label>아이디 (ID)</label>
+                    <input type="text" id="loginId" autocomplete="off" placeholder="ex: admin">
                 </div>
                 <div class="auth-input-group">
-                    <label>비밀번호</label>
-                    <input type="password" id="loginPw" placeholder="ex: 비밀번호">
+                    <label>비밀번호 (6자리 이상)</label>
+                    <input type="password" id="loginPw" placeholder="ex: 123456">
                 </div>
                 <button class="auth-btn" onclick="handleLogin()">게임 접속하기</button>
                 
                 <div class="auth-external-link-wrap">
-                    <button class="auth-external-toggle-btn" onclick="switchAuthTab('ticket')">관리자에게 신규 회원가입요청 보내기</button>
+                    <button class="auth-external-toggle-btn" onclick="switchAuthTab('ticket')">관리자에게 일반 회원가입 요청 보내기</button>
                 </div>
             </div>
 
@@ -781,10 +778,11 @@
             }
         }, 500);
 
-        // --- Supabase 초기화 설정 ---
+        // --- Supabase 초기화 설정 (변수명 충돌 오류 완벽 해결!) ---
         const supabaseUrl = 'https://efwymlndmqkpgxuuwhvu.supabase.co';
         const supabaseKey = 'sb_publishable_h-nNfui1DG8yG4VdhsLapg_yIGClTBw';
         
+        // 기존 supabase 이름이 시스템이랑 충돌해서 gameDB로 변경했습니다!
         const gameDB = window.supabase.createClient(supabaseUrl, supabaseKey);
         
         // 관리자 우회를 위한 2차 백그라운드 클라이언트 세팅
@@ -814,7 +812,6 @@
 
         let goldenCookieBuffTimer = 0;
         let globalRaidActive = false;
-        // 보스 체력 10,000배 (1e18)
         const MAX_BOSS_HP = 1000000000000000000; 
         let globalRaidHp = MAX_BOSS_HP;
 
@@ -1145,6 +1142,7 @@
             } catch(e) { console.error("백업 에러:", e); }
         };
 
+        // 🔥 중복 구독 방지 플래그 모음
         let _noticeSub = false;
         let _explosionSub = false;
         let _rankingSub = false;
@@ -1153,7 +1151,7 @@
         let _ticketSub = false;
 
         function listenToLiveGlobalNotice() {
-            if(_noticeSub) return; _noticeSub = true; 
+            if(_noticeSub) return; _noticeSub = true; // 중복 접속 방지!
             const fetchNotice = async () => {
                 const { data } = await gameDB.from('system_notice').select('*').eq('id', 'live').maybeSingle();
                 document.getElementById('liveNoticeContentText').innerText = data?.content || "환영합니다! 시현클리커 v3.3V 실시간 서버 네트워크 연동 완료.";
@@ -1176,7 +1174,7 @@
         };
 
         function listenToServerExplosionState() {
-            if(_explosionSub) return; _explosionSub = true; 
+            if(_explosionSub) return; _explosionSub = true; // 중복 접속 방지!
             const fetchExplosion = async () => {
                 const { data } = await gameDB.from('server_status').select('*').eq('id', 'state').maybeSingle();
                 const targetOverlay = document.getElementById('serverExplosionOverlay');
@@ -1217,7 +1215,7 @@
 
         let globalLiveRankData = [];
         function startLiveGlobalRankingTracker() {
-            if(_rankingSub) return; _rankingSub = true; 
+            if(_rankingSub) return; _rankingSub = true; // 중복 접속 방지!
             const fetchRankings = async () => {
                 const { data: snapshot } = await gameDB.from('users').select('*');
                 if(!snapshot) return;
@@ -1473,7 +1471,7 @@
         }
 
         function listenToGlobalRaidState() {
-            if(_raidSub) return; _raidSub = true; 
+            if(_raidSub) return; _raidSub = true; // 중복 접속 방지!
             const fetchRaid = async () => {
                 const { data } = await gameDB.from('world_raid').select('*').eq('id', 'current_boss').maybeSingle();
                 const uiPanel = document.getElementById('raidBossUIPanel');
@@ -1734,7 +1732,7 @@
         };
 
         function loadChatMessages() {
-            if(_chatSub) return; _chatSub = true; 
+            if(_chatSub) return; _chatSub = true; // 중복 접속 방지!
             const fetchChats = async () => {
                 const { data: docs } = await gameDB.from('chat_messages').select('*').order('timestamp', { ascending: false }).limit(50);
                 const msgArea = document.getElementById('chatMsgArea');
@@ -1975,6 +1973,8 @@
                                 await gameDB.from('users').delete().eq('userId', targetId);
                                 
                                 if(!authErr && signInData.user) {
+                                    // 주의: 프론트엔드 환경에서 Supabase Auth deleteUser는 백엔드 Service Role이 필요하여 실패할 수 있습니다.
+                                    // DB가 삭제된 시점부터는 로그인하여도 게임데이터 갱신이 불가해 파쇄와 동일한 효과가 납니다.
                                     console.warn("Client side Auth delete may require backend RPC, depending on Supabase RLS.");
                                 }
                                 successCount++;
@@ -2116,7 +2116,7 @@
         };
 
         function loadAdminTicketsFeed() {
-            if(_ticketSub) return; _ticketSub = true; 
+            if(_ticketSub) return; _ticketSub = true; // 중복 접속 방지!
             if (!isUserAdminPrivilege && !isUserSuperAdmin) return;
             const fetchTickets = async () => {
                 const { data: snapshot } = await gameDB.from('admin_tickets').select('*').order('timestamp', { ascending: false }).limit(6);
