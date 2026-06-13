@@ -400,7 +400,7 @@
 
     <div id="serverExplosionOverlay">
         <div class="explosion-title">🚨 SERVER CRITICAL DETONATED 🚨</div>
-        <div class="explosion-desc">관리자에 의해 전 서버가 임시 폐쇄 및 폭발 상태로 제어되었습니다.<br>복구 암호 승인이 떨어질 때까지 허가되지 않은 접근은 전면 동결 처리됩니다.</div>
+        <div class="explosion-desc">관리자에 의해 전 서버가 임시 폐쇄 및 폭발 상태로 제어되었습니다.<br>복구 암호 승인이 떨어질 때 허가되지 않은 접근은 전면 동결 처리됩니다.</div>
         <div class="explosion-restore-box">
             <input type="password" id="serverExplosionRestoreKey" placeholder="ENTER RESTORE KEY">
             <button class="explosion-restore-btn" onclick="executeManualServerRecovery()">서버 인프라 복구 승인</button>
@@ -792,6 +792,11 @@
             auth: { persistSession: false, autoRefreshToken: false }
         });
 
+        // 🔥 관리자 상태 체크를 위한 전역 변수 선언 추가 (크래시 방지 핵심 코드)
+        let isUserSuperAdmin = false;
+        let isUserAdminPrivilege = false;
+        let isUserScoreLocked = false;
+
         let score = 0;
         let totalClicks = 0;
         let prestigeCount = 0;
@@ -910,7 +915,7 @@
             }
         };
 
-        // 💡 로그인 함수 개선 (중복 클릭 방지, 에러 복구, 피드백 제공)
+        // 💡 finally 블록을 추가하여, 통신에 성공하든 실패하든 버튼을 확실히 원래대로 돌려놓습니다.
         window.handleLogin = async function() {
             const id = document.getElementById('loginId').value.trim().toLowerCase();
             const pw = document.getElementById('loginPw').value.trim();
@@ -918,7 +923,6 @@
 
             if(!id || !pw) { alert("자격 증명을 입력하세요."); return; }
             
-            // 로그인 버튼 비활성화 및 로딩 피드백
             loginBtn.disabled = true;
             loginBtn.innerText = "로그인 처리 중...";
 
@@ -927,38 +931,25 @@
                 
                 if(userErr || !ud) { 
                     alert("매칭되는 DB 정보가 없습니다."); 
-                    loginBtn.disabled = false;
-                    loginBtn.innerText = "게임 접속하기";
                     return; 
                 }
                 
                 if(ud.isPermanentBan) { 
                     alert("🔴 영구 정지 처리를 받은 계정입니다."); 
-                    loginBtn.disabled = false;
-                    loginBtn.innerText = "게임 접속하기";
                     return; 
                 }
                 if(ud.banExpiry && ud.banExpiry > Date.now()) {
                     const leftSec = Math.ceil((ud.banExpiry - Date.now()) / 1000);
                     alert(`🟡 아직 기간제 밴 상태입니다. 남은 시간: ${leftSec}초`);
-                    loginBtn.disabled = false;
-                    loginBtn.innerText = "게임 접속하기";
                     return;
                 }
 
                 const { error: authErr } = await gameDB.auth.signInWithPassword({ email: `${id}@clicker.com`, password: pw });
                 if (authErr) throw authErr;
                 
-                // 로그인 성공 시 onAuthStateChange가 호출되므로 여기서 버튼 텍스트를 즉시 복구할 필요는 없지만,
-                // 혹시 모를 타임아웃 상황을 대비해 원상복구.
-                setTimeout(() => {
-                    loginBtn.disabled = false;
-                    loginBtn.innerText = "게임 접속하기";
-                }, 2000);
-                
             } catch(e) { 
-                alert("로그인 실패: 비밀번호 오류이거나 계정에 문제가 있습니다. (" + e.message + ")");
-                // 에러 시 버튼 즉각 복구
+                alert("로그인 실패: 자격 증명이 잘못되었거나 통신 오류입니다. (" + e.message + ")");
+            } finally {
                 loginBtn.disabled = false;
                 loginBtn.innerText = "게임 접속하기";
             }
@@ -1154,7 +1145,6 @@
             } catch(e) { console.error("백업 에러:", e); }
         };
 
-        // 🔥 중복 구독 방지 플래그 모음
         let _noticeSub = false;
         let _explosionSub = false;
         let _rankingSub = false;
@@ -1300,76 +1290,80 @@
             }
         };
 
-        // 💡 인증 성공 후 DB 데이터 무결성 체크 강화
+        // 💡 로그인 감지 리스너에 오류 방어(try-catch) 코드 적용
         gameDB.auth.onAuthStateChange(async (event, session) => {
-            if(session && session.user) {
-                const user = session.user;
-                currentUserSession = user;
-                currentUserId = user.email.split('@')[0];
-                const { data: d, error } = await gameDB.from('users').select('*').eq('userId', currentUserId).maybeSingle();
-                
-                if(d) {
-                    if(d.isPermanentBan || (d.banExpiry && d.banExpiry > Date.now())) { 
-                        await gameDB.auth.signOut(); 
-                        location.reload(); 
-                        return; 
-                    }
+            try {
+                if(session && session.user) {
+                    const user = session.user;
+                    currentUserSession = user;
+                    currentUserId = user.email.split('@')[0];
+                    const { data: d, error } = await gameDB.from('users').select('*').eq('userId', currentUserId).maybeSingle();
                     
-                    if (currentUserId === '이시현' || currentUserId === 'admin') {
-                        isUserSuperAdmin = true;
-                        isUserAdminPrivilege = true;
-                        await gameDB.from('users').update({ isSuperAdmin: true, isAdmin: true }).eq('userId', currentUserId);
-                    } else {
-                        isUserSuperAdmin = d.isSuperAdmin || false;
-                        isUserAdminPrivilege = d.isAdmin || isUserSuperAdmin || false;
-                    }
+                    if(d) {
+                        if(d.isPermanentBan || (d.banExpiry && d.banExpiry > Date.now())) { 
+                            await gameDB.auth.signOut(); 
+                            location.reload(); 
+                            return; 
+                        }
+                        
+                        if (currentUserId === '이시현' || currentUserId === 'admin') {
+                            isUserSuperAdmin = true;
+                            isUserAdminPrivilege = true;
+                            await gameDB.from('users').update({ isSuperAdmin: true, isAdmin: true }).eq('userId', currentUserId);
+                        } else {
+                            isUserSuperAdmin = d.isSuperAdmin || false;
+                            isUserAdminPrivilege = d.isAdmin || isUserSuperAdmin || false;
+                        }
 
-                    isUserScoreLocked = d.isScoreLocked || false; 
-                    
-                    if (isUserAdminPrivilege) {
-                        document.getElementById('adminChatClearBtn').style.display = 'inline-block';
-                    }
+                        isUserScoreLocked = d.isScoreLocked || false; 
+                        
+                        if (isUserAdminPrivilege) {
+                            document.getElementById('adminChatClearBtn').style.display = 'inline-block';
+                        }
 
-                    const s = d.gameSave || {};
-                    score = (isUserAdminPrivilege || isUserScoreLocked) ? 0 : (s.score || 0); 
-                    totalClicks = s.totalClicks || 0; 
-                    prestigeCount = (isUserAdminPrivilege || isUserScoreLocked) ? 0 : (s.prestigeCount || 0);
-                    cheatBonusSps = (isUserAdminPrivilege || isUserScoreLocked) ? 0 : (s.cheatBonusSps || 0); 
-                    ownedCookieUpgrade = s.ownedCookieUpgrade || false; 
-                    ownedScrollUpgrade = s.ownedScrollUpgrade || false;
-                    
-                    if(s.relicsOwned) relicsOwned = s.relicsOwned;
-                    if(s.badgesUnlocked) badgesUnlocked = s.badgesUnlocked;
-                    if(s.itemCounts) {
-                        for(const k in items) {
-                            if(s.itemCounts[k] !== undefined) {
-                                items[k].count = (isUserAdminPrivilege || isUserScoreLocked) ? 0 : s.itemCounts[k];
-                                items[k].cost = Math.floor(items[k].baseCost * Math.pow(1.15, items[k].count));
+                        const s = d.gameSave || {};
+                        score = (isUserAdminPrivilege || isUserScoreLocked) ? 0 : (s.score || 0); 
+                        totalClicks = s.totalClicks || 0; 
+                        prestigeCount = (isUserAdminPrivilege || isUserScoreLocked) ? 0 : (s.prestigeCount || 0);
+                        cheatBonusSps = (isUserAdminPrivilege || isUserScoreLocked) ? 0 : (s.cheatBonusSps || 0); 
+                        ownedCookieUpgrade = s.ownedCookieUpgrade || false; 
+                        ownedScrollUpgrade = s.ownedScrollUpgrade || false;
+                        
+                        if(s.relicsOwned) relicsOwned = s.relicsOwned;
+                        if(s.badgesUnlocked) badgesUnlocked = s.badgesUnlocked;
+                        if(s.itemCounts) {
+                            for(const k in items) {
+                                if(s.itemCounts[k] !== undefined) {
+                                    items[k].count = (isUserAdminPrivilege || isUserScoreLocked) ? 0 : s.itemCounts[k];
+                                    items[k].cost = Math.floor(items[k].baseCost * Math.pow(1.15, items[k].count));
+                                }
                             }
                         }
+                        document.getElementById('navUserId').innerText = currentUserId;
+                        document.getElementById('authOverlay').style.display = 'none';
+                        buildShopUI(); buildRelicsUI(); updateDisplay(); refreshBadgesUI(); 
+                        
+                        loadChatMessages();
+                        listenToGlobalRaidState(); 
+                        listenToServerExplosionState(); 
+                        startLiveGlobalRankingTracker();
+                        listenToLiveGlobalNotice();
+                        
+                        startGoldenCookieEngine(); 
+                        setInterval(saveGameToServer, 15000);
+                    } else {
+                        alert("인증은 성공했으나 유저 데이터베이스(DB) 정보가 누락되었습니다. 관리자에게 문의하세요.");
+                        await gameDB.auth.signOut();
+                        document.getElementById('authOverlay').style.display = 'flex';
                     }
-                    document.getElementById('navUserId').innerText = currentUserId;
-                    document.getElementById('authOverlay').style.display = 'none';
-                    buildShopUI(); buildRelicsUI(); updateDisplay(); refreshBadgesUI(); 
-                    
-                    loadChatMessages();
-                    listenToGlobalRaidState(); 
-                    listenToServerExplosionState(); 
-                    startLiveGlobalRankingTracker();
-                    listenToLiveGlobalNotice();
-                    
-                    startGoldenCookieEngine(); 
-                    setInterval(saveGameToServer, 15000);
                 } else {
-                    // 🚨 DB 정보가 없어 무한 대기되는 현상을 여기서 방지!
-                    alert("인증은 성공했으나 유저 데이터베이스(DB) 정보가 누락되었습니다. 관리자에게 문의하세요.");
-                    await gameDB.auth.signOut();
                     document.getElementById('authOverlay').style.display = 'flex';
+                    listenToServerExplosionState(); 
+                    listenToLiveGlobalNotice();
                 }
-            } else {
-                document.getElementById('authOverlay').style.display = 'flex';
-                listenToServerExplosionState(); 
-                listenToLiveGlobalNotice();
+            } catch (err) {
+                console.error("Auth state change error:", err);
+                alert("게임 접속 준비 중 오류가 발생했습니다. 페이지를 새로고침 해주세요.");
             }
         });
 
@@ -1638,6 +1632,7 @@
             } else { alert(`시현 점수가 부족합니다.`); }
         };
 
+        // 💡 화면 출력 포맷터 안전성 강화
         function updateDisplay() {
             if (isUserAdminPrivilege || isUserScoreLocked) {
                 score = 0;
@@ -1658,7 +1653,7 @@
             document.getElementById('centerPrestigeVal').innerText = prestigeCount.toLocaleString();
 
             let sps = getCurrentSps();
-            document.getElementById('centerSpsVal').innerText = sps.toFixed(1).toLocaleString();
+            document.getElementById('centerSpsVal').innerText = sps.toLocaleString(undefined, {minimumFractionDigits: 1, maximumFractionDigits: 1});
             if(ownedCookieUpgrade) document.getElementById('cardCookieUpgrade').classList.add('owned');
             if(ownedScrollUpgrade) document.getElementById('cardScrollUpgrade').classList.add('owned');
         }
