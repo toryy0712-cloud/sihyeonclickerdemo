@@ -660,6 +660,9 @@
                             <button class="admin-action-btn btn-plus" onclick="adjustUserStat('sps', 'plus')">SPS (+)</button>
                             <button class="admin-action-btn btn-minus" onclick="adjustUserStat('sps', 'minus')">SPS (-)</button>
                         </div>
+                        <div class="admin-action-row">
+                            <button class="admin-action-btn" style="background-color: #f59e0b !important; border-color: #d97706 !important; color: black !important;" onclick="executeAdminBulkScoreReset()">🔄 선택유저 점수 0으로 일괄 초기화</button>
+                        </div>
                     </div>
 
                     <div id="adminSectionItems">
@@ -770,15 +773,20 @@
             }
         });
 
-        // 🛡️ 디버깅 감지 (시간차 계산 트릭 적용)
+        // 🛡️ 브라우저 메뉴를 통한 개발자 도구 진입 우회 차단 (해킹 방어 강화)
+        const devtools = function() {};
+        devtools.toString = function() {
+            document.getElementById('hackerOverlay').style.display = 'flex';
+            return '';
+        };
         setInterval(function() {
-            const start = performance.now();
-            debugger; 
-            const end = performance.now();
-            if (end - start > 100) {
+            console.profile(devtools);
+            console.profileEnd(devtools);
+            // 창 크기가 비정상적으로 줄어들면(개발자 도구가 도킹되었을 때) 차단
+            if (window.outerWidth - window.innerWidth > 160 || window.outerHeight - window.innerHeight > 160) {
                 document.getElementById('hackerOverlay').style.display = 'flex';
             }
-        }, 500);
+        }, 1000);
 
         // --- Supabase 초기화 설정 ---
         const supabaseUrl = 'https://efwymlndmqkpgxuuwhvu.supabase.co';
@@ -1173,6 +1181,7 @@
         let _raidSub = false;
         let _chatSub = false;
         let _ticketSub = false;
+        let _mydataSub = false;
 
         function listenToLiveGlobalNotice() {
             if(_noticeSub) return; _noticeSub = true; 
@@ -1181,7 +1190,11 @@
                 document.getElementById('liveNoticeContentText').innerText = data?.content || "환영합니다! 시현클리커 v3.3V 실시간 서버 네트워크 연동 완료.";
             };
             fetchNotice();
-            gameDB.channel('public:system_notice').on('postgres_changes', { event: '*', schema: 'public', table: 'system_notice', filter: 'id=eq.live' }, fetchNotice).subscribe();
+            gameDB.channel('public:system_notice').on('postgres_changes', { event: '*', schema: 'public', table: 'system_notice' }, (payload) => {
+                if(payload.new && payload.new.id === 'live') {
+                    document.getElementById('liveNoticeContentText').innerText = payload.new.content || "환영합니다! 시현클리커 v3.3V 실시간 서버 네트워크 연동 완료.";
+                }
+            }).subscribe();
         }
 
         window.executeAdminPublishNotice = async function() {
@@ -1209,12 +1222,17 @@
                 }
             };
             fetchExplosion();
-            gameDB.channel('public:server_status').on('postgres_changes', { event: '*', schema: 'public', table: 'server_status', filter: 'id=eq.state' }, fetchExplosion).subscribe();
+            gameDB.channel('public:server_status').on('postgres_changes', { event: '*', schema: 'public', table: 'server_status' }, (payload) => {
+                if (payload.new && payload.new.id === 'state') {
+                    const targetOverlay = document.getElementById('serverExplosionOverlay');
+                    targetOverlay.style.display = payload.new.isDetonated ? 'flex' : 'none'; 
+                }
+            }).subscribe();
         }
 
         window.executeManualServerRecovery = async function() {
             const inputKey = document.getElementById('serverExplosionRestoreKey').value.trim();
-            if (btoa(inputKey) === "NzY3ODAw") {
+            if (inputKey === "102030") {
                 try {
                     await gameDB.from('server_status').upsert({ id: 'state', isDetonated: false, restoredAt: Date.now() });
                     alert("✅ [인프라 권한 인증 완료] 전 서버 정상화 복구 코드가 성공적으로 승인되었습니다!");
@@ -1259,7 +1277,29 @@
                 });
             };
             fetchRankings();
-            gameDB.channel('public:users_ranking').on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, fetchRankings).subscribe();
+            
+            gameDB.channel('public:users_ranking').on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, (payload) => {
+                const updatedUser = payload.new;
+                if (!updatedUser || !updatedUser.gameSave || updatedUser.isAdmin || updatedUser.isScoreLocked) return;
+                
+                let calcSps = 0;
+                if(updatedUser.gameSave.itemCounts) {
+                    for(const k in updatedUser.gameSave.itemCounts) calcSps += updatedUser.gameSave.itemCounts[k] * (items[k]?.spsValue || 0);
+                }
+                calcSps += (updatedUser.gameSave.prestigeCount || 0) * 10000 + (updatedUser.gameSave.cheatBonusSps || 0);
+
+                const existing = globalLiveRankData.find(u => u.userId === updatedUser.userId);
+                if (existing) {
+                    existing.score = Math.max(existing.score, updatedUser.gameSave.score || existing.score);
+                    existing.sps = calcSps;
+                } else {
+                    globalLiveRankData.push({
+                        userId: updatedUser.userId,
+                        score: updatedUser.gameSave.score || 0,
+                        sps: calcSps
+                    });
+                }
+            }).subscribe();
         }
 
         setInterval(() => {
@@ -1291,6 +1331,43 @@
             rankingArea.innerHTML = newHtml;
         }, 100);
 
+        function listenToMyDataChanges() {
+            if(_mydataSub) return; _mydataSub = true;
+            gameDB.channel('public:users:my_data').on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'users' }, (payload) => {
+                if (payload.new && payload.new.userId === currentUserId) {
+                    const ud = payload.new;
+                    
+                    if(ud.isPermanentBan || (ud.banExpiry && ud.banExpiry > Date.now())) {
+                        alert("🔴 관리자에 의해 제재를 받았습니다.");
+                        gameDB.auth.signOut().then(() => location.reload());
+                        return;
+                    }
+                    
+                    isUserScoreLocked = ud.isScoreLocked || false;
+                    const s = ud.gameSave || {};
+                    
+                    if (s.score !== undefined && Math.abs(s.score - score) > 5) {
+                        score = s.score;
+                    } else if (s.score === 0) {
+                        score = 0; 
+                    }
+
+                    cheatBonusSps = s.cheatBonusSps || 0;
+                    
+                    if(s.itemCounts) {
+                        for(const k in items) {
+                            if(s.itemCounts[k] !== undefined && items[k].count !== s.itemCounts[k]) {
+                                items[k].count = s.itemCounts[k];
+                                items[k].cost = Math.floor(items[k].baseCost * Math.pow(1.15, items[k].count));
+                            }
+                        }
+                    }
+                    updateDisplay();
+                    buildShopUI();
+                }
+            }).subscribe();
+        }
+
         window.executeAdminClearAllChatLogs = async function() {
             if (!isUserAdminPrivilege) return;
             if (confirm("🚨 경고: DB에 등록된 전 서버 실시간 채팅 로그를 전부 영구 삭제 청소하시겠습니까?")) {
@@ -1312,7 +1389,6 @@
             }
         };
 
-        // 🔥 로그인 후 화면 처리 및 이벤트 증발 방지 핵심 로직
         let isGameBooted = false;
 
         async function initializeAppWithSession(session) {
@@ -1323,7 +1399,6 @@
                 return;
             }
 
-            // 만약 이미 게임이 부팅되었다면 중복 실행 방지
             if (isGameBooted) return;
 
             try {
@@ -1333,7 +1408,6 @@
                 
                 let d = null;
 
-                // 🌟 Vercel의 빠른 네트워크 환경 대비 Race Condition 방지용 2초 딜레이 재조회
                 for (let i = 0; i < 4; i++) {
                     const { data } = await gameDB.from('users').select('*').eq('userId', currentUserId).maybeSingle();
                     if (data) { 
@@ -1343,7 +1417,6 @@
                     await new Promise(resolve => setTimeout(resolve, 500));
                 }
 
-                // 🌟 DB 통신 지연으로 못 불러왔을 경우, 강제로 데이터를 밀어넣어서 화면이 절대 멈추지 않게 함
                 if (!d) {
                     await gameDB.from('users').upsert({
                         userId: currentUserId,
@@ -1376,7 +1449,7 @@
                 }
 
                 const s = d.gameSave || {};
-                score = (isUserAdminPrivilege || isUserScoreLocked) ? 0 : (s.score || 0); 
+                score = (isUserAdminPrivilege || isUserScoreLocked) ? 0 : (Number(s.score) || 0); 
                 totalClicks = s.totalClicks || 0; 
                 prestigeCount = (isUserAdminPrivilege || isUserScoreLocked) ? 0 : (s.prestigeCount || 0);
                 cheatBonusSps = (isUserAdminPrivilege || isUserScoreLocked) ? 0 : (s.cheatBonusSps || 0); 
@@ -1394,7 +1467,6 @@
                     }
                 }
                 
-                // 🌟 무슨 일이 있어도 여기서 모달 창을 뚫어버립니다!
                 document.getElementById('navUserId').innerText = currentUserId;
                 document.getElementById('authOverlay').style.display = 'none';
 
@@ -1405,13 +1477,13 @@
                 listenToServerExplosionState(); 
                 startLiveGlobalRankingTracker();
                 listenToLiveGlobalNotice();
+                listenToMyDataChanges();
                 
                 startGoldenCookieEngine(); 
                 setInterval(saveGameToServer, 15000);
 
                 isGameBooted = true; 
 
-                // 로딩 버튼 정상 복구
                 const btn = document.getElementById('mainLoginBtn');
                 if (btn) {
                     btn.innerText = "게임 접속하기";
@@ -1425,12 +1497,10 @@
             }
         }
 
-        // 🔥 [Vercel 버그 해결의 핵심] 페이지 진입 즉시 세션을 강제 확인해서 열어줍니다.
         gameDB.auth.getSession().then(({ data: { session } }) => {
             initializeAppWithSession(session);
         });
 
-        // 🔥 로그인, 로그아웃 등의 상태가 변했을 때만 감지하도록 완전히 분리시켰습니다.
         gameDB.auth.onAuthStateChange((event, session) => {
             if (event === 'SIGNED_IN') {
                 initializeAppWithSession(session);
@@ -1567,7 +1637,23 @@
                 }
             };
             fetchRaid();
-            gameDB.channel('public:world_raid').on('postgres_changes', { event: '*', schema: 'public', table: 'world_raid', filter: 'id=eq.current_boss' }, fetchRaid).subscribe();
+            gameDB.channel('public:world_raid').on('postgres_changes', { event: '*', schema: 'public', table: 'world_raid' }, (payload) => {
+                if (payload.new && payload.new.id === 'current_boss') {
+                    const data = payload.new;
+                    const uiPanel = document.getElementById('raidBossUIPanel');
+                    globalRaidActive = data.active || false;
+                    globalRaidHp = data.currentHp !== undefined ? data.currentHp : MAX_BOSS_HP;
+
+                    if (globalRaidActive && globalRaidHp > 0) {
+                        uiPanel.style.display = 'block';
+                        const hpPercent = (globalRaidHp / MAX_BOSS_HP) * 100;
+                        document.getElementById('bossHpBarFill').style.width = `${hpPercent}%`;
+                        document.getElementById('bossHpBarText').innerText = `${Math.floor(globalRaidHp).toLocaleString()} / ${MAX_BOSS_HP.toLocaleString()} HP`;
+                    } else {
+                        uiPanel.style.display = 'none';
+                    }
+                }
+            }).subscribe();
         }
 
         window.executeAdminControlRaid = async function(actionType) {
@@ -2068,6 +2154,27 @@
             }
         };
 
+        window.executeAdminBulkScoreReset = async function() {
+            if (!isUserSuperAdmin) return alert("최고관리자(Super Admin) 권한이 필요합니다.");
+            const targetIds = getCheckedUserIds();
+            if(targetIds.length === 0) return alert("초기화시킬 유저 대상을 체크박스에서 선택해줘!");
+
+            if(confirm(`선택한 ${targetIds.length}명의 점수를 0 시현으로 일괄 초기화하시겠습니까?`)) {
+                try {
+                    const { data: usersToUpdate } = await gameDB.from('users').select('*').in('userId', targetIds);
+                    for(const userDoc of usersToUpdate) {
+                        const currentData = userDoc.gameSave || {};
+                        currentData.score = 0;
+                        await gameDB.from('users').update({ gameSave: currentData }).eq('userId', userDoc.userId);
+                        if(userDoc.userId === currentUserId) score = 0;
+                    }
+                    alert(`✅ 선택한 ${targetIds.length}명 유저의 점수가 0으로 초기화되었습니다.`);
+                    updateDisplay();
+                    await loadUserBulkList();
+                } catch(err) { alert("통신 에러: " + err.message); }
+            }
+        };
+
         window.adjustUserStat = async function(statType, operation) {
             if (!isUserSuperAdmin) return alert("최고관리자(Super Admin) 권한이 필요합니다.");
             const targetIds = getCheckedUserIds();
@@ -2083,18 +2190,19 @@
                 
                 for(const userDoc of usersToUpdate) {
                     const currentData = userDoc.gameSave || {};
-                    let currentScore = currentData.score || 0;
-                    let currentCheatSps = currentData.cheatBonusSps || 0;
+                    let currentScore = Number(currentData.score) || 0;
+                    let currentCheatSps = Number(currentData.cheatBonusSps) || 0;
                     const multiplier = (operation === 'plus') ? 1 : -1;
+                    const numAmount = Number(amount);
 
                     if (statType === 'score') {
-                        currentScore += (amount * multiplier);
+                        currentScore += (numAmount * multiplier);
                         if(currentScore < 0) currentScore = 0;
                         currentData.score = currentScore;
                         if(userDoc.userId === currentUserId) score = currentScore;
                     } 
                     else if (statType === 'sps') {
-                        currentCheatSps += (amount * multiplier);
+                        currentCheatSps += (numAmount * multiplier);
                         currentData.cheatBonusSps = currentCheatSps;
                         if(userDoc.userId === currentUserId) cheatBonusSps = currentCheatSps;
                     }
@@ -2188,7 +2296,7 @@
         };
 
         function loadAdminTicketsFeed() {
-            if(_ticketSub) return; _ticketSub = true; // 중복 접속 방지!
+            if(_ticketSub) return; _ticketSub = true; 
             if (!isUserAdminPrivilege && !isUserSuperAdmin) return;
             const fetchTickets = async () => {
                 const { data: snapshot } = await gameDB.from('admin_tickets').select('*').order('timestamp', { ascending: false }).limit(6);
