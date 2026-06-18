@@ -789,6 +789,11 @@
             auth: { persistSession: false, autoRefreshToken: false }
         });
 
+        // 🔥 오류를 방지하기 위해 권한 관련 전역 변수를 선언합니다.
+        let isUserSuperAdmin = false;
+        let isUserAdminPrivilege = false;
+        let isUserScoreLocked = false;
+
         let score = 0;
         let totalClicks = 0;
         let prestigeCount = 0;
@@ -906,65 +911,46 @@
             }
         };
 
+        // 🔥 여기서 "비번 틀려도 무반응 / 맞아도 무반응" 버그를 해결했습니다.
         window.handleLogin = async function() {
-            // 이시현님 전용: 계정이 없을 시 자동 가입 및 DB 복구 기능 탑재
             let id = document.getElementById('loginId').value.trim().toLowerCase().replace(/\s+/g, '');
             const pw = document.getElementById('loginPw').value.trim();
             if(!id || !pw) { alert("자격 증명을 입력하세요."); return; }
+            if(pw.length < 6) { alert("비밀번호는 6자리 이상이어야 합니다."); return; }
+
             try {
-                // 1. Auth 세션 로그인 시도
-                let { error: authErr } = await gameDB.auth.signInWithPassword({ email: `${id}@clicker.com`, password: pw });
-                
-                // 2. 만약 계정이 없거나 에러가 났을 때 자동 회원가입 진행 (자동 가입 로직 추가)
-                if (authErr && (authErr.message.includes('Invalid login credentials') || authErr.message.includes('not found') || authErr.message.includes('Invalid'))) {
-                    
-                    const { error: signUpError } = await gameDB.auth.signUp({ email: `${id}@clicker.com`, password: pw });
-                    
-                    // 이미 가입된 에러가 아닌 다른 에러라면 던짐
-                    if (signUpError && !signUpError.message.includes('already registered')) {
-                        throw signUpError;
+                // 1. 입력한 아이디가 DB에 있는지 먼저 확인하여 "계정 없음"과 "비밀번호 틀림"을 명확히 구분합니다.
+                const { data: existingUser } = await gameDB.from('users').select('*').eq('userId', id).maybeSingle();
+
+                if (existingUser) {
+                    // 유저가 존재한다면 -> 단순 로그인만 시도
+                    const { error: authErr } = await gameDB.auth.signInWithPassword({ email: `${id}@clicker.com`, password: pw });
+                    if (authErr) {
+                        alert("❌ 로그인 실패: 비밀번호가 틀렸습니다!");
+                        return; // 실패하면 여기서 즉시 멈추고 에러창을 띄웁니다.
                     }
-
-                    // users 테이블에 초기 데이터 생성 (껍데기 문제 해결)
-                    await gameDB.from('users').upsert({
-                        userId: id,
-                        password: pw,
-                        gameSave: { score: 100, totalClicks: 0, prestigeCount: 0 }
-                    });
-
-                    // 가입/복구 완료 후 재로그인 시도
-                    const { error: retryErr } = await gameDB.auth.signInWithPassword({ email: `${id}@clicker.com`, password: pw });
-                    if (retryErr) throw retryErr;
-                    authErr = null; // 인증 성공
-                } else if (authErr) {
-                    throw authErr; // 비밀번호 오류 등은 그대로 던짐
-                }
-                
-                // 3. 세션이 있는 상태에서 users 테이블의 권한/정지/데이터 확인
-                const { data: ud, error: userErr } = await gameDB.from('users').select('*').eq('userId', id).maybeSingle();
-                
-                if(userErr || !ud) { 
-                    // 인증은 통과했는데 DB 테이블에 데이터가 없는 경우 복구
-                    await gameDB.from('users').upsert({
-                        userId: id,
-                        password: pw,
-                        gameSave: { score: 100, totalClicks: 0, prestigeCount: 0 }
-                    });
+                    // 성공했다면 onAuthStateChange가 이어받아서 게임을 시작합니다.
                 } else {
-                    if(ud.isPermanentBan) { 
-                        alert("🔴 영구 정지 처리를 받은 계정입니다."); 
-                        await gameDB.auth.signOut();
-                        return; 
-                    }
-                    if(ud.banExpiry && ud.banExpiry > Date.now()) {
-                        const leftSec = Math.ceil((ud.banExpiry - Date.now()) / 1000);
-                        alert(`🟡 아직 기간제 밴 상태입니다. 남은 시간: ${leftSec}초`);
-                        await gameDB.auth.signOut();
+                    // 유저가 존재하지 않는다면 -> 신규 가입
+                    const { error: signUpError } = await gameDB.auth.signUp({ email: `${id}@clicker.com`, password: pw });
+
+                    if (signUpError && !signUpError.message.includes('already registered')) {
+                        alert("❌ 회원가입 실패: " + signUpError.message);
                         return;
                     }
+
+                    // onAuthStateChange에서 Race Condition(DB가 늦게 생기는 문제)을 방지하기 위해 가입 즉시 users 정보를 만들어줍니다.
+                    await gameDB.from('users').upsert({
+                        userId: id,
+                        password: pw,
+                        gameSave: { score: 100, totalClicks: 0, prestigeCount: 0 }
+                    });
+
+                    // DB 생성이 완료된 후 확실하게 접속 처리
+                    await gameDB.auth.signInWithPassword({ email: `${id}@clicker.com`, password: pw });
                 }
             } catch(e) { 
-                alert("로그인/가입 실패: 비밀번호 오류이거나 계정에 문제가 있습니다. (" + e.message + ")"); 
+                alert("접속 중 시스템 오류가 발생했습니다: " + e.message); 
             }
         };
 
@@ -1309,10 +1295,18 @@
                 const user = session.user;
                 currentUserSession = user;
                 currentUserId = user.email.split('@')[0];
-                const { data: d, error } = await gameDB.from('users').select('*').eq('userId', currentUserId).maybeSingle();
+                
+                let d = null;
+                // 🔥 데이터 생성(Race condition) 지연을 대비해 최대 1.5초(3번) 동안 재조회합니다.
+                for (let i = 0; i < 3; i++) {
+                    const { data } = await gameDB.from('users').select('*').eq('userId', currentUserId).maybeSingle();
+                    if (data) { d = data; break; }
+                    await new Promise(resolve => setTimeout(resolve, 500)); 
+                }
                 
                 if(d) {
                     if(d.isPermanentBan || (d.banExpiry && d.banExpiry > Date.now())) { 
+                        alert("🔴 정지 처리를 받은 계정입니다.");
                         await gameDB.auth.signOut(); 
                         location.reload(); 
                         return; 
@@ -1364,6 +1358,8 @@
                     
                     startGoldenCookieEngine(); 
                     setInterval(saveGameToServer, 15000);
+                } else {
+                    alert("⚠️ 서버에서 유저 데이터를 가져오는 데 실패했습니다. 새로고침을 해주세요.");
                 }
             } else {
                 document.getElementById('authOverlay').style.display = 'flex';
