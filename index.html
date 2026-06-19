@@ -9,8 +9,7 @@
     <link rel="shortcut icon" type="image/jpeg" href="1000000883.jpg">
 
     <script>
-        // 🛡️ URL 강제 접근 방어 시스템: 
-        // 만약 주소가 /admin 인데 방사능 방패 인증을 안 거쳤다면 무조건 루트(/)로 쫓아냅니다.
+        // 🛡️ URL 강제 접근 방어 시스템
         if (window.location.pathname.endsWith('/admin')) {
             if (sessionStorage.getItem('admin_access_granted') !== 'true') {
                 window.location.replace('/');
@@ -379,11 +378,11 @@
         .ticket-row { background-color: var(--input-bg); border: 1px solid var(--border-color); padding: 8px; border-radius: 4px; font-size: 12px; line-height: 1.4; color: var(--text-main); }
         .ticket-meta { font-size: 10px; color: var(--text-sub); margin-bottom: 4px; display: flex; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 3px; }
 
-        /* AI 챗봇 전용 스타일 추가 */
+        /* AI 챗봇 전용 스타일 추가 (절대 빠지면 안 됨!) */
         #chatbotToggleBtn {
             position: fixed; bottom: 20px; left: 20px;
             background-color: #38bdf8; color: #000; border: none; padding: 12px 18px;
-            border-radius: 20px; font-weight: bold; cursor: pointer; z-index: 9000;
+            border-radius: 20px; font-weight: bold; cursor: pointer; z-index: 99999;
             box-shadow: 0 4px 10px rgba(0,0,0,0.5);
             transition: all 0.2s;
         }
@@ -392,7 +391,7 @@
         #chatbotContainer {
             display: none; position: fixed; bottom: 70px; left: 20px;
             width: 320px; height: 450px; background-color: var(--bg-panel);
-            border: 2px solid #38bdf8; border-radius: 10px; z-index: 9000;
+            border: 2px solid #38bdf8; border-radius: 10px; z-index: 99999;
             flex-direction: column; overflow: hidden; box-shadow: 0 5px 15px rgba(0,0,0,0.7);
         }
         .chatbot-header {
@@ -460,7 +459,6 @@
             <button onclick="sendChatbotMessage()">전송</button>
         </div>
     </div>
-
     <div id="globalNoticeTickerBar">
         <span class="notice-badge">Notice</span>
         <div id="liveNoticeContentText">공지사항 데이터 스트리밍을 파싱하고 있습니다...</div>
@@ -870,8 +868,6 @@
             auth: { persistSession: false, autoRefreshToken: false }
         });
 
-        // 🔥 AI 챗봇 Gemini API Key (삭제됨 - 보안을 위해 서버로 이동 완료)
-
         let isUserSuperAdmin = false;
         let isUserAdminPrivilege = false;
         let isUserScoreLocked = false;
@@ -919,7 +915,7 @@
 
         let badgesUnlocked = { welcome: true, click100: false, cookieMaster: false, scrollMaster: false };
 
-        // 🤖 AI 챗봇 토글 및 백엔드 서버 연동 로직
+        // 🤖 AI 챗봇 토글 및 백엔드 서버 연동 로직 (이 부분이 반드시 있어야 작동해!)
         window.toggleChatbot = function() {
             const cb = document.getElementById('chatbotContainer');
             cb.style.display = cb.style.display === 'flex' ? 'none' : 'flex';
@@ -937,7 +933,6 @@
             addChatbotMessage('bot', 'AI가 답변을 생성 중입니다...', loadingId);
 
             try {
-                // 구글 API 대신 안전하게 내 Vercel 백엔드 서버(/api/chat)로 요청 보냄
                 const response = await fetch('/api/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -1713,7 +1708,7 @@
                 gc.onclick = function(event) {
                     event.stopPropagation();
                     if(isUserAdminPrivilege || isUserScoreLocked) {
-                        alert("🔒 점수 획득이 불가한 계정은 황금 쿠키 축복 버프 전리품을 획득할 수 없습니다.");
+                        alert("🔒 점수 획득이 불가한 계정은 황금 쿠키 축복 버프를 획득할 수 없습니다.");
                         gc.remove();
                         return;
                     }
