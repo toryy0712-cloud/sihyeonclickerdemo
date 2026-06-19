@@ -379,6 +379,46 @@
         .ticket-row { background-color: var(--input-bg); border: 1px solid var(--border-color); padding: 8px; border-radius: 4px; font-size: 12px; line-height: 1.4; color: var(--text-main); }
         .ticket-meta { font-size: 10px; color: var(--text-sub); margin-bottom: 4px; display: flex; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 3px; }
 
+        /* AI 챗봇 전용 스타일 추가 */
+        #chatbotToggleBtn {
+            position: fixed; bottom: 20px; left: 20px;
+            background-color: #38bdf8; color: #000; border: none; padding: 12px 18px;
+            border-radius: 20px; font-weight: bold; cursor: pointer; z-index: 9000;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            transition: all 0.2s;
+        }
+        #chatbotToggleBtn:hover { background-color: #0ea5e9; transform: scale(1.05); }
+
+        #chatbotContainer {
+            display: none; position: fixed; bottom: 70px; left: 20px;
+            width: 320px; height: 450px; background-color: var(--bg-panel);
+            border: 2px solid #38bdf8; border-radius: 10px; z-index: 9000;
+            flex-direction: column; overflow: hidden; box-shadow: 0 5px 15px rgba(0,0,0,0.7);
+        }
+        .chatbot-header {
+            background-color: #38bdf8; color: #000; padding: 10px; font-weight: bold;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        #chatbotMessages {
+            flex: 1; padding: 12px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px;
+            font-size: 13px; color: var(--text-main); background-color: var(--bg-main);
+        }
+        #chatbotMessages::-webkit-scrollbar { width: 5px; }
+        #chatbotMessages::-webkit-scrollbar-thumb { background: #38bdf8; border-radius: 2px; }
+        .chatbot-msg { padding: 8px 12px; border-radius: 8px; max-width: 85%; word-break: break-all; line-height: 1.5; }
+        .chatbot-msg.user { background-color: #2563eb; color: white; align-self: flex-end; border-bottom-right-radius: 0; }
+        .chatbot-msg.bot { background-color: #1e293b; color: #e2e8f0; align-self: flex-start; border: 1px solid #334155; border-bottom-left-radius: 0; }
+        .chatbot-input-area {
+            display: flex; border-top: 1px solid var(--border-color); height: 45px;
+        }
+        .chatbot-input-area input {
+            flex: 1; padding: 10px; border: none; background-color: var(--input-bg); color: white; outline: none; font-size: 13px;
+        }
+        .chatbot-input-area button {
+            padding: 0 15px; background-color: #38bdf8; border: none; color: #000; font-weight: bold; cursor: pointer; transition: background 0.2s;
+        }
+        .chatbot-input-area button:hover { background-color: #0ea5e9; }
+
         @media (max-width: 768px) {
             #mainContainer { flex-direction: column; overflow-y: auto; display: block; }
             #leftPanel, #centerPanel, #rightPanel { 
@@ -389,6 +429,7 @@
             .scroll-container { overflow-y: visible; max-height: none; padding-bottom: max(100px, env(safe-area-inset-bottom)); }
             .chat-room-container { min-height: 350px; margin-top: 20px; }
             .modal-box { width: 95%; max-height: 90dvh; }
+            #chatbotContainer { width: calc(100% - 40px); left: 20px; right: 20px; bottom: 80px; }
         }
     </style>
 </head>
@@ -403,6 +444,22 @@
     </div>
 
     <button id="reopenAdminBtn" onclick="openAdminModal()" style="display:none; position:fixed; bottom:20px; right:20px; background-color:#ff0055; color:white; border:2px solid #b91c1c; padding:12px; border-radius:8px; font-weight:bold; cursor:pointer; z-index:9000; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">⚙️ 관리자 패널 다시열기</button>
+
+    <button id="chatbotToggleBtn" onclick="toggleChatbot()">🤖 AI 비서</button>
+    
+    <div id="chatbotContainer">
+        <div class="chatbot-header">
+            <span>🤖 시현클리커 공식 가이드</span>
+            <button onclick="toggleChatbot()" style="background:none;border:none;color:black;font-size:16px;cursor:pointer;font-weight:bold;">✕</button>
+        </div>
+        <div id="chatbotMessages">
+            <div class="chatbot-msg bot">안녕하세요! 시현클리커(v3.3V)에 대해 무엇이든 물어보세요! 환생 방법, 레이드 보스, 아이템 설명 등을 도와드릴게요.</div>
+        </div>
+        <div class="chatbot-input-area">
+            <input type="text" id="chatbotInput" placeholder="게임에 대해 물어보세요..." onkeydown="if(event.key==='Enter') sendChatbotMessage()">
+            <button onclick="sendChatbotMessage()">전송</button>
+        </div>
+    </div>
 
     <div id="globalNoticeTickerBar">
         <span class="notice-badge">Notice</span>
@@ -813,6 +870,8 @@
             auth: { persistSession: false, autoRefreshToken: false }
         });
 
+        // 🔥 AI 챗봇 Gemini API Key (삭제됨 - 보안을 위해 서버로 이동 완료)
+
         let isUserSuperAdmin = false;
         let isUserAdminPrivilege = false;
         let isUserScoreLocked = false;
@@ -859,6 +918,55 @@
         const relicBonusValues = [500, 1500, 5000];
 
         let badgesUnlocked = { welcome: true, click100: false, cookieMaster: false, scrollMaster: false };
+
+        // 🤖 AI 챗봇 토글 및 백엔드 서버 연동 로직
+        window.toggleChatbot = function() {
+            const cb = document.getElementById('chatbotContainer');
+            cb.style.display = cb.style.display === 'flex' ? 'none' : 'flex';
+        };
+
+        window.sendChatbotMessage = async function() {
+            const input = document.getElementById('chatbotInput');
+            const text = input.value.trim();
+            if(!text) return;
+
+            addChatbotMessage('user', text);
+            input.value = '';
+
+            const loadingId = 'bot_loading_' + Date.now();
+            addChatbotMessage('bot', 'AI가 답변을 생성 중입니다...', loadingId);
+
+            try {
+                // 구글 API 대신 안전하게 내 Vercel 백엔드 서버(/api/chat)로 요청 보냄
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: text })
+                });
+
+                const data = await response.json();
+                document.getElementById(loadingId)?.remove();
+
+                if (response.ok && data.reply) {
+                    addChatbotMessage('bot', data.reply);
+                } else {
+                    addChatbotMessage('bot', data.error || '죄송합니다. 서버 처리 중 오류가 발생했습니다.');
+                }
+            } catch(e) {
+                document.getElementById(loadingId)?.remove();
+                addChatbotMessage('bot', '서버 통신 오류가 발생했습니다. (백엔드 설정 확인 필요)');
+            }
+        };
+
+        function addChatbotMessage(sender, text, id = null) {
+            const msgArea = document.getElementById('chatbotMessages');
+            const div = document.createElement('div');
+            div.className = `chatbot-msg ${sender}`;
+            if(id) div.id = id;
+            div.innerHTML = text.replace(/\n/g, '<br>');
+            msgArea.appendChild(div);
+            msgArea.scrollTop = msgArea.scrollHeight;
+        }
 
         // 🛡️ 시크릿 관리자 모드 커스텀 모달 띄우기 (방사능 방패 클릭 시)
         window.showAdminLoginModal = function() {
@@ -1605,7 +1713,7 @@
                 gc.onclick = function(event) {
                     event.stopPropagation();
                     if(isUserAdminPrivilege || isUserScoreLocked) {
-                        alert("🔒 점수 획득이 불가한 계정은 황금 쿠키 축복 버프를 획득할 수 없습니다.");
+                        alert("🔒 점수 획득이 불가한 계정은 황금 쿠키 축복 버프 전리품을 획득할 수 없습니다.");
                         gc.remove();
                         return;
                     }
