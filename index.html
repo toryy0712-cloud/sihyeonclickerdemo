@@ -1486,7 +1486,7 @@
             rankingArea.innerHTML = newHtml;
         }, 100);
 
-        // 🌟 Supabase Realtime: 내 점수 조작(뺏김, 초기화 등) 새로고침 없이 즉시 동기화 리스너
+        // 🌟 Supabase Realtime: 내 점 조작(뺏김, 초기화 등) 새로고침 없이 즉시 동기화 리스너
         function listenToMyDataChanges() {
             if(_mydataSub) return; _mydataSub = true;
             gameDB.channel('public:users:my_data').on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'users' }, (payload) => {
