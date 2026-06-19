@@ -1,0 +1,21 @@
+{
+  "name": "시현클리커 v3.3",
+  "short_name": "시현클리커",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0c1017",
+  "theme_color": "#0c1017",
+  "description": "이시현의 제과점 클리커 게임",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
