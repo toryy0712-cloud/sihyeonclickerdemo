@@ -81,6 +81,17 @@
         .nav-left { color: var(--text-sub); }
         .nav-left .user-highlight { color: #00ffcc; font-weight: bold; }
 
+        .nav-center-btn {
+            background: linear-gradient(180deg, #2b3a4a, #1a232e);
+            border: 1px solid #41556c;
+            color: #a4b8cf;
+            padding: 5px 20px;
+            border-radius: 15px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .nav-center-btn:hover { border-color: #ff0055; color: #ffffff; }
+
         .nav-logout-btn {
             background-color: #cc3333; color: #ffffff; border: none;
             padding: 6px 14px; font-size: 12px; font-weight: bold;
@@ -368,17 +379,6 @@
         .ticket-row { background-color: var(--input-bg); border: 1px solid var(--border-color); padding: 8px; border-radius: 4px; font-size: 12px; line-height: 1.4; color: var(--text-main); }
         .ticket-meta { font-size: 10px; color: var(--text-sub); margin-bottom: 4px; display: flex; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 3px; }
 
-        /* ☢️🛡️ 로그인창 구석의 방사능 방패 그래픽 스타일 */
-        .admin-shield-graphic {
-            position: absolute; bottom: -10px; right: -10px;
-            width: 60px; height: 60px; cursor: pointer; opacity: 0.8;
-            transition: all 0.2s; z-index: 10;
-            background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADwAAAA8CAMAAAByfD3pAAAAWlBMVEVEX///9PT0////9PT0////9PT0////9PT0////9PT0////9PT0////9PT0////9PT0////9PT0////9PT0////9PT0////9PT0////9PT0////9PT0////9PT0///76W8CMAAABxdklEQVRIie3VSw6AIAwF0EIF/f9bW4A4mKgfWTS7cDKYAtXqE4G1Fqx1LwHq1UvABvUatFG9BuxQr8FO9RbYqd4De9VbYF/1XjhXvRfOV+9FC4iO7kQLCI/uRAtYHt2JFhAe3YkWEB7diRbw//UGLP87K/QNAHIAAAAASUVORK5CYII=");
-            background-size: contain; background-repeat: no-repeat;
-            filter: drop-shadow(0 0 8px rgba(255, 100, 0, 0.7)); /* 어두운 배경에 빛나는 효과 */
-        }
-        .admin-shield-graphic:hover { opacity: 1; transform: scale(1.1); filter: drop-shadow(0 0 12px rgba(255, 150, 0, 0.9)); }
-
         @media (max-width: 768px) {
             #mainContainer { flex-direction: column; overflow-y: auto; display: block; }
             #leftPanel, #centerPanel, #rightPanel { 
@@ -401,6 +401,8 @@
         </div>
         <button class="nav-logout-btn" onclick="handleLogout()">로그아웃 (정지)</button>
     </div>
+
+    <button id="reopenAdminBtn" onclick="openAdminModal()" style="display:none; position:fixed; bottom:20px; right:20px; background-color:#ff0055; color:white; border:2px solid #b91c1c; padding:12px; border-radius:8px; font-weight:bold; cursor:pointer; z-index:9000; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">⚙️ 관리자 패널 다시열기</button>
 
     <div id="globalNoticeTickerBar">
         <span class="notice-badge">Notice</span>
@@ -456,8 +458,24 @@
                 </div>
                 <button class="auth-btn" style="background-color: #10b981; color: white;" onclick="handleRegisterTicketSend()">관리자에게 가입요청 쪽지보내기</button>
             </div>
+        </div>
 
-            <div class="admin-shield-graphic" id="adminSecretShield" onclick="triggerAdminShieldAccess()"></div>
+        <div id="adminSecretShield" onclick="showAdminLoginModal()" style="position: absolute; bottom: 25px; right: 25px; font-size: 45px; cursor: pointer; filter: drop-shadow(0 0 10px rgba(255, 50, 0, 0.8)); transition: transform 0.2s z-index: 10001;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'" title="System Core">☢️🛡️</div>
+    </div>
+
+    <div id="customAdminLoginModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 100000; justify-content: center; align-items: center;">
+        <div style="background-color: #fdfaf6; border-radius: 16px; padding: 25px 30px; width: 380px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); position: relative; color: #333; font-family: sans-serif;">
+            <button onclick="document.getElementById('customAdminLoginModal').style.display='none'" style="position: absolute; top: 15px; right: 20px; background: none; border: none; font-size: 20px; color: #666; cursor: pointer;">✕</button>
+            <div style="display: flex; align-items: center; margin-bottom: 10px; gap: 10px;">
+                <div style="width: 36px; height: 36px; border: 1px solid #d4c0a5; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px;">✨</div>
+                <h2 style="margin: 0; font-size: 20px; font-weight: 800; color: #4a3c31;">관리자 모드</h2>
+            </div>
+            <p style="margin: 0 0 20px 0; font-size: 14px; color: #6b5d54;">설정해 둔 관리자 비밀번호를 입력하세요.</p>
+            <label style="display: block; font-size: 14px; font-weight: bold; color: #2c5253; margin-bottom: 8px;">비밀번호</label>
+            <div style="position: relative; margin-bottom: 25px;">
+                <input type="password" id="customAdminPwdInput" placeholder="비밀번호" style="width: 100%; padding: 14px 15px; border: 2px solid #e0d5c1; border-radius: 10px; font-size: 15px; outline: none; box-sizing: border-box; background-color: #fff; color: #333;">
+            </div>
+            <button onclick="submitCustomAdminLogin()" style="width: 100%; background: linear-gradient(180deg, #5c9df5, #3b82f6); color: white; border: none; padding: 15px; font-size: 16px; font-weight: bold; border-radius: 10px; cursor: pointer; box-shadow: 0 4px 10px rgba(59, 130, 246, 0.4);">로그인</button>
         </div>
     </div>
 
@@ -768,7 +786,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
-        // 우클릭 및 단축키 차단 (오작동을 일으키던 콘솔 감지 및 화면 크기 감지는 삭제하여 억울하게 튕기는 현상 해결)
+        // 우클릭 및 단축키 차단
         window.addEventListener('contextmenu', function (e) {
             e.preventDefault();
         });
@@ -842,10 +860,18 @@
 
         let badgesUnlocked = { welcome: true, click100: false, cookieMaster: false, scrollMaster: false };
 
-        // 🛡️ 시크릿 관리자 로그인 모드 (방사능 방패 클릭 시)
-        window.triggerAdminShieldAccess = function() {
-            const pwd = prompt("SYSTEM ADMIN AUTHORIZATION CODE:");
+        // 🛡️ 시크릿 관리자 모드 커스텀 모달 띄우기 (방사능 방패 클릭 시)
+        window.showAdminLoginModal = function() {
+            document.getElementById('customAdminLoginModal').style.display = 'flex';
+            document.getElementById('customAdminPwdInput').value = '';
+            document.getElementById('customAdminPwdInput').focus();
+        };
+
+        // 🛡️ 시크릿 관리자 로그인 실행
+        window.submitCustomAdminLogin = function() {
+            const pwd = document.getElementById('customAdminPwdInput').value.trim();
             if (pwd === "102030") {
+                document.getElementById('customAdminLoginModal').style.display = 'none';
                 sessionStorage.setItem('admin_access_granted', 'true');
                 
                 // URL vercel.app/admin 으로 변경
@@ -937,6 +963,7 @@
         };
 
         window.handleLogin = async function() {
+            // 이시현님 전용: 계정이 없을 시 자동 가입 및 DB 복구 기능 탑재
             let id = document.getElementById('loginId').value.trim().toLowerCase().replace(/\s+/g, '');
             const pw = document.getElementById('loginPw').value.trim();
             const loginBtn = document.getElementById('mainLoginBtn');
@@ -947,9 +974,12 @@
             loginBtn.disabled = true;
 
             try {
+                // 1. Auth 세션 로그인 시도
                 let { error: authErr } = await gameDB.auth.signInWithPassword({ email: `${id}@clicker.com`, password: pw });
                 
+                // 2. 만약 계정이 없거나 에러가 났을 때 자동 회원가입 진행
                 if (authErr && (authErr.message.includes('Invalid login credentials') || authErr.message.includes('not found') || authErr.message.includes('Invalid'))) {
+                    
                     const { error: signUpError } = await gameDB.auth.signUp({ email: `${id}@clicker.com`, password: pw });
                     
                     if (signUpError && !signUpError.message.includes('already registered')) {
@@ -969,6 +999,7 @@
                     throw authErr; 
                 }
                 
+                // 3. 세션이 있는 상태에서 users 테이블 확인
                 const { data: ud, error: userErr } = await gameDB.from('users').select('*').eq('userId', id).maybeSingle();
                 
                 if(userErr || !ud) { 
@@ -1191,7 +1222,7 @@
             } catch(e) { console.error("백업 에러:", e); }
         };
 
-        // 🌟 실시간 중복 구독 방지 플래그
+        // 🔥 중복 구독 방지 플래그 모음
         let _noticeSub = false;
         let _explosionSub = false;
         let _rankingSub = false;
@@ -1371,21 +1402,17 @@
                     let dbScore = Number(s.score) || 0;
                     let needUpdate = false;
 
-                    // 점수 동기화 처리 (관리자가 초기화하거나, 뺏었거나, 추가했을 때)
                     if (dbScore === 0 && score > 0) {
                         score = 0; needUpdate = true;
                     } else if (Math.abs(dbScore - score) > 50) { 
-                        // 오차가 클릭 수준을 넘어가면 관리자가 조작한 것으로 판단하여 즉시 반영
                         score = dbScore; needUpdate = true;
                     }
 
-                    // SPS 동기화 처리
                     let dbSps = Number(s.cheatBonusSps) || 0;
                     if (cheatBonusSps !== dbSps) {
                         cheatBonusSps = dbSps; needUpdate = true;
                     }
                     
-                    // 아이템 동기화 처리
                     if(s.itemCounts) {
                         for(const k in items) {
                             if(s.itemCounts[k] !== undefined && items[k].count !== s.itemCounts[k]) {
@@ -1512,7 +1539,7 @@
                 listenToServerExplosionState(); 
                 startLiveGlobalRankingTracker();
                 listenToLiveGlobalNotice();
-                listenToMyDataChanges(); // 🌟 실시간 점수 조작 리스너 가동
+                listenToMyDataChanges();
                 
                 startGoldenCookieEngine(); 
                 setInterval(saveGameToServer, 15000);
@@ -1525,8 +1552,9 @@
                     btn.disabled = false;
                 }
 
-                // 🌟 관리자 인증을 통해 들어온 경우 패널 자동 띄우기
+                // 🌟 관리자 권한을 통해 들어온 경우 패널 바로 띄우기
                 if (sessionStorage.getItem('admin_access_granted') === 'true') {
+                    document.getElementById('reopenAdminBtn').style.display = 'block';
                     openAdminModal();
                 }
 
@@ -1795,10 +1823,10 @@
 
         function buildRelicsUI() {
             const root = document.getElementById('relicsRoot'); root.innerHTML = '';
-            relicsOwned.forEach((r, idx) => {
+            relicsList.forEach((r, idx) => {
                 const div = document.createElement('div');
                 div.className = `relic-item-row ${relicsOwned[idx] ? 'owned' : ''}`;
-                div.innerHTML = `<span>🔮 ${relicsList[idx].name} (+${relicsList[idx].val.toLocaleString()} SPS)</span><strong>${relicsOwned[idx] ? '활성화' : '미획득'}</strong>`;
+                div.innerHTML = `<span>🔮 ${r.name} (+${r.val.toLocaleString()} SPS)</span><strong>${relicsOwned[idx] ? '활성화' : '미획득'}</strong>`;
                 root.appendChild(div);
             });
         }
@@ -2194,7 +2222,6 @@
             }
         };
 
-        // 🌟 점수를 0으로 일괄 초기화하는 전용 함수
         window.executeAdminBulkScoreReset = async function() {
             if (!isUserSuperAdmin) return alert("최고관리자(Super Admin) 권한이 필요합니다.");
             const targetIds = getCheckedUserIds();
@@ -2238,14 +2265,12 @@
 
                     if (statType === 'score') {
                         currentScore += (numAmount * multiplier);
-                        // 🌟 점수를 뺏었을 때 음수(-123)가 되지 않도록 0 밑으로는 방어
                         if(currentScore < 0) currentScore = 0;
                         currentData.score = currentScore;
                         if(userDoc.userId === currentUserId) score = currentScore;
                     } 
                     else if (statType === 'sps') {
                         currentCheatSps += (numAmount * multiplier);
-                        // SPS도 음수 방지
                         if(currentCheatSps < 0) currentCheatSps = 0;
                         currentData.cheatBonusSps = currentCheatSps;
                         if(userDoc.userId === currentUserId) cheatBonusSps = currentCheatSps;
@@ -2299,7 +2324,6 @@
             } catch(e) { alert("아이템 인젝션 에러: " + e.message); }
         };
 
-        // 🌟 비밀번호 덮어쓰기 Auth 동기화 오류 완벽 해결
         window.executeAdminUserPasswordOverride = async function() {
             if (!isUserSuperAdmin) return alert("최고관리자 권한이 필요합니다.");
             const targetIds = getCheckedUserIds();
@@ -2316,19 +2340,17 @@
                     if(targetSnap) {
                         const oldPw = targetSnap.password;
                         
-                        // DB에 먼저 업데이트 반영
                         await gameDB.from('users').update({ password: targetNewPw }).eq('userId', targetId);
 
                         if (oldPw) {
                             try {
-                                // 2차 백그라운드 클라이언트를 통해 Auth 비번까지 확실하게 동기화 (기존 세션 꼬임 방지)
                                 const { data: loginData } = await secondarySupabase.auth.signInWithPassword({ email: `${targetId}@clicker.com`, password: oldPw });
                                 if (loginData.user) {
                                     await secondarySupabase.auth.updateUser({ password: targetNewPw });
                                 }
                                 await secondarySupabase.auth.signOut();
                             } catch (authErr) {
-                                console.warn(`Auth PW 변경 스킵 (무시 가능): `, authErr);
+                                console.warn(`Auth PW 변경 프로세스 스킵 (${targetId}): `, authErr);
                             }
                         }
                         successCount++;
@@ -2342,7 +2364,6 @@
             }
         };
 
-        // 🌟 Supabase Realtime: 새로고침 없는 실시간 관리자 티켓 피드 동기화
         function loadAdminTicketsFeed() {
             if(_ticketSub) return; _ticketSub = true; 
             if (!isUserAdminPrivilege && !isUserSuperAdmin) return;
