@@ -17,7 +17,7 @@
         }
     </script>
 
-<link rel="manifest" href="manifest.json">
+    <link rel="manifest" href="manifest.json">
     
     <meta name="theme-color" content="#0c1017">
 
@@ -234,6 +234,10 @@
         }
         @keyframes pulseGlow { 0% { transform: scale(1); box-shadow: 0 0 10px #eab308; } 100% { transform: scale(1.15); box-shadow: 0 0 25px #facc15; } }
 
+        /* 버그 퇴치 시스템 애니메이션 */
+        .bug-entity { position: absolute; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; font-size: 24px; cursor: crosshair; z-index: 998; animation: scurry 0.2s infinite alternate; filter: drop-shadow(0 0 5px #ef4444); }
+        @keyframes scurry { 0% { transform: translate(0, 0) rotate(-10deg); } 100% { transform: translate(5px, 5px) rotate(10deg); } }
+
         #centerPanel {
             width: 40%; display: flex; flex-direction: column; padding: 15px 20px;
             background-color: var(--bg-main); overflow-y: auto;
@@ -281,9 +285,18 @@
         .gacha-box { border: 1px dashed #1d4ed8; background-color: var(--bg-panel); border-radius: 6px; padding: 15px; text-align: center; margin-bottom: 15px; }
         .gacha-title { color: #3b82f6; font-size: 15px; font-weight: bold; margin-bottom: 6px; }
         .gacha-desc { color: #60a5fa; font-size: 11px; margin-bottom: 12px; }
-        .mini-badge-row { display: flex; justify-content: center; gap: 12px; margin-top: 15px; border-top: 1px solid var(--border-color); padding-top: 12px; }
-        .mini-badge-slot { width: 32px; height: 32px; background-color: var(--input-bg); border: 1px solid var(--border-color); border-radius: 4px; display: flex; align-items: center; justify-content: center; opacity: 0.2; font-size: 16px; }
-        .mini-badge-slot.unlocked { opacity: 1; border-color: #eab308; background-color: #1e1b10; }
+
+        /* 업적 보드 시스템 전용 스타일 추가 */
+        .achievement-box { border: 1px dashed #10b981; background-color: var(--bg-panel); border-radius: 6px; padding: 15px; margin-bottom: 15px; }
+        .achievement-title { color: #10b981; font-size: 15px; font-weight: bold; margin-bottom: 10px; text-align: center; }
+        .achievement-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; max-height: 250px; overflow-y: auto; padding-right: 5px; }
+        .achievement-grid::-webkit-scrollbar { width: 4px; }
+        .achievement-grid::-webkit-scrollbar-thumb { background: #10b981; border-radius: 2px; }
+        .achievement-item { background-color: var(--input-bg); border: 1px solid var(--border-color); border-radius: 4px; padding: 10px 8px; text-align: center; opacity: 0.5; filter: grayscale(100%); transition: all 0.3s; display: flex; flex-direction: column; justify-content: center;}
+        .achievement-item.unlocked { opacity: 1; filter: grayscale(0%); border-color: #10b981; background-color: #064e3b; box-shadow: inset 0 0 10px rgba(16, 185, 129, 0.2); }
+        .achieve-name { font-size: 12px; font-weight: bold; color: var(--text-main); margin-bottom: 4px; }
+        .achieve-cond { font-size: 10px; color: #8b9bb4; margin-bottom: 4px; }
+        .achieve-desc { font-size: 9px; color: #34d399; }
 
         .chat-room-container { border: 1px solid var(--border-color); background-color: var(--bg-panel); border-radius: 6px; display: flex; flex-direction: column; height: 230px; margin-top: auto; }
         .chat-header { background-color: var(--input-bg); padding: 8px 12px; font-size: 12px; font-weight: bold; color: #00ffcc; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; }
@@ -625,21 +638,14 @@
                 <div>초당 생산량 (SPS) : <span id="centerSpsVal" style="color:#00ffcc; font-weight:bold;">0</span></div>
                 <div>총 환생 횟수 : <span id="centerPrestigeVal" style="color:#a855f7; font-weight:bold;">0</span>회</div>
                 <div style="margin-top: 3px; font-size:11px; color:var(--text-sub);">누적 원격 클릭수: <span id="centerClicksVal">0</span>회</div>
+                <div style="margin-top: 3px; font-size:11px; color:#ef4444;">누적 퇴치한 버그: <span id="centerBugsVal">0</span>마리</div>
             </div>
 
-            <div class="gacha-box">
-                <div class="gacha-title">🔮 고대 유물 무작위 뽑기 상자</div>
-                <div class="gacha-desc">보유 중인 유물은 SPS 배율 증가!</div>
-                
-                <div class="mini-badge-row">
-                    <div class="mini-badge-slot" id="mini_badge_welcome" title="첫 발걸음">🎉</div>
-                    <div class="mini-badge-slot" id="mini_badge_click100" title="클릭커">⚡</div>
-                    <div class="mini-badge-slot" id="mini_badge_cookieMaster" title="쿠키 거상">🍪</div>
-                    <div class="mini-badge-slot" id="mini_badge_scrollMaster" title="주문서 광신도">📜</div>
-                </div>
+            <div class="achievement-box">
+                <div class="achievement-title">🏆 업적 보드</div>
+                <div class="achievement-grid" id="achievementGrid">
+                    </div>
             </div>
-
-            <div id="relicsRoot" style="margin-bottom:15px;"></div>
 
             <div class="chat-room-container">
                 <div class="chat-header">
@@ -659,7 +665,7 @@
             
             <div class="spec-upgrade-row">
                 <div class="spec-mini-card" id="cardCookieUpgrade" onclick="buySpecial('cookie')" title="🔥 황금 시현 쿠키 수련">🔥</div>
-                <div class="spec-mini-card" id="cardScrollUpgrade" onclick="buySpecial('scroll')" title="💫 고대 강화 주문서 비급">💫</div>
+                <div class="spec-mini-card" id="cardScrollUpgrade" onclick="buySpecial('scroll')" title="💫 최적화 알고리즘 비급 (SPS 대폭 상승)">💫</div>
             </div>
 
             <div class="store-control-bar">
@@ -774,7 +780,7 @@
                                 <option value="item2">👵 Grandma</option>
                                 <option value="item3">🌱 Farm</option>
                                 <option value="item4">⛏️ Mine</option>
-                                <option value="item5">🏭 Factory</option>
+                                <option value="item5">🤖 AI 직원</option>
                                 <option value="item6">🏛️ Temple</option>
                                 <option value="item7">👹 괴물시현</option>
                                 <option value="item8">👑 보스시현</option>
@@ -907,30 +913,42 @@
         const MAX_BOSS_HP = 1000000000000000000; 
         let globalRaidHp = MAX_BOSS_HP;
 
-        // 불가능보스 아이템 추가
+        // 아이템 (AI 직원 등 업적 호환 명칭으로 교체 완료)
         const items = {
             item1: { name: "Cursor", cost: 15, count: 0, spsValue: 0.1, baseCost: 15, icon: "👆" },
             item2: { name: "Grandma", cost: 100, count: 0, spsValue: 1, baseCost: 100, icon: "👵" },
             item3: { name: "Farm", cost: 1100, count: 0, spsValue: 8, baseCost: 1100, icon: "🌱" },
             item4: { name: "Mine", cost: 12000, count: 0, spsValue: 47, baseCost: 12000, icon: "⛏️" },
-            item5: { name: "Factory", cost: 130000, count: 0, spsValue: 260, baseCost: 130000, icon: "🏭" },
+            item5: { name: "AI 직원", cost: 130000, count: 0, spsValue: 260, baseCost: 130000, icon: "🤖" },
             item6: { name: "Temple", cost: 1000000, count: 0, spsValue: 1500, baseCost: 1000000, icon: "🏛️" },
             item7: { name: "괴물시현", cost: 100000000, count: 0, spsValue: 150000, baseCost: 100000000, icon: "👹" },
             item8: { name: "보스시현", cost: 1000000000, count: 0, spsValue: 2000000, baseCost: 1000000000, icon: "👑" },
             item9: { name: "불가능보스", cost: 100000000000000000000000, count: 0, spsValue: 999999999999999, baseCost: 100000000000000000000000, icon: "☠️" }
         };
 
-        const relicsList = [
-            { name: "별무리 조각 고대 유물", val: 500 },
-            { name: "심해의 진주 고대 유물", val: 1500 },
-            { name: "시간의 나침반 고대 유물", val: 5000 }
+        // 업적 데이터
+        const achievementData = [
+            { id: 'helloWorld', name: "Hello World", condition: "첫 클릭", desc: "모든 위대한 프로젝트는 여기서 시작된다.", type: "일반" },
+            { id: 'keyboardWarrior', name: "키보드 워리어", condition: "100번 클릭", desc: "손가락에 불이 붙기 시작했다.", type: "일반" },
+            { id: 'caffeine', name: "카페인 충전", condition: "1,000번 클릭", desc: "커피 없이는 못 살아.", type: "일반" },
+            { id: 'nightDev', name: "밤샘 개발", condition: "10,000번 클릭", desc: "해가 떴는데 왜 아직도 코딩 중이지?", type: "일반" },
+            { id: 'codeMaster', name: "코드 장인", condition: "100,000번 클릭", desc: "코드가 예술이 되었다.", type: "일반" },
+            { id: 'bugHunter', name: "버그 헌터", condition: "버그 10개 제거", desc: "버그가 널 두려워한다.", type: "일반" },
+            { id: 'debuggingGod', name: "디버깅의 신", condition: "버그 1,000개 제거", desc: "Stack Overflow가 널 검색한다.", type: "희귀" },
+            { id: 'firstDeploy', name: "첫 배포", condition: "첫 업그레이드 구매", desc: "제발 안 터지길...", type: "일반" },
+            { id: 'noDowntime', name: "무중단 배포", condition: "업그레이드 50개 구매", desc: "기적이 일어났다.", type: "희귀" },
+            { id: 'serverAdmin', name: "서버 관리자", condition: "자동 생산 시작", desc: "이제 기계가 일한다.", type: "일반" },
+            { id: 'devOps', name: "DevOps 입문", condition: "자동 생산량 100 달성", desc: "배포 버튼이 무섭지 않다.", type: "일반" },
+            { id: 'aiUser', name: "AI 활용러", condition: "AI 직원 고용", desc: "이제 혼자가 아니다.", type: "일반" },
+            { id: 'aiAddict', name: "AI 중독", condition: "AI 직원 100명 보유", desc: "누가 개발자인지 모르겠다.", type: "희귀" },
+            { id: 'startup', name: "스타트업 창업", condition: "생산량 1,000 달성", desc: "꿈은 크게 가져라.", type: "일반" },
+            { id: 'investment', name: "투자 유치", condition: "생산량 10,000 달성", desc: "축하합니다. 이제 투자자 눈치 봅니다.", type: "희귀" }
         ];
-        let relicsOwned = [false, false, false];
-        const relicBonusValues = [500, 1500, 5000];
 
-        let badgesUnlocked = { welcome: true, click100: false, cookieMaster: false, scrollMaster: false };
+        let unlockedAchievements = {}; 
+        let bugsRemovedCount = 0;
 
-        // 🤖 AI 챗봇 토글 및 백엔드 서버 연동 로직 (이 부분이 반드시 있어야 작동해!)
+        // 🤖 AI 챗봇 토글 및 로직
         window.toggleChatbot = function() {
             const cb = document.getElementById('chatbotContainer');
             cb.style.display = cb.style.display === 'flex' ? 'none' : 'flex';
@@ -947,7 +965,6 @@
             const loadingId = 'bot_loading_' + Date.now();
             addChatbotMessage('bot', 'AI가 답변을 생성 중입니다...', loadingId);
 
-            // 🛠️ 백엔드 API 대신 자체 내장 스마트 답변 시스템으로 교체 (서버 오류 완벽 방어)
             setTimeout(() => {
                 document.getElementById(loadingId)?.remove();
                 let reply = "";
@@ -960,8 +977,8 @@
                     reply = "🎲 도박은 운을 시험하여 보유한 시현을 늘릴 수 있는 시스템입니다. 성공 시 베팅액만큼 얻고, 실패 시 잃게 됩니다. (관리자가 승률을 조정할 수 있습니다)";
                 } else if (text.includes("아이템") || text.includes("상점") || text.includes("구매") || text.includes("SPS")) {
                     reply = "🛒 우측 상점에서는 SPS(초당 생산량)를 늘려주는 다양한 아이템을 살 수 있습니다. 보유 개수가 늘어날수록 다음 구매 비용이 15%씩 증가하니 전략적으로 구매하세요.";
-                } else if (text.includes("유물") || text.includes("뽑기")) {
-                    reply = "🔮 고대 유물은 환생을 통해 무작위로 획득할 수 있는 강력한 패시브 아이템입니다. 보유 시 SPS 효율이 엄청나게 상승합니다!";
+                } else if (text.includes("업적") || text.includes("뱃지")) {
+                    reply = "🏆 게임 내 여러 행동(클릭, 아이템 구매, 버그 퇴치 등)을 통해 총 15종의 다양한 업적을 달성할 수 있습니다. 수집의 재미를 느껴보세요!";
                 } else if (text.includes("황금") || text.includes("쿠키")) {
                     reply = "⭐ 화면에 무작위로 나타나는 '황금 쿠키'를 클릭하면 7초 동안 모든 클릭 대미지와 자동 생산 효율이 77배로 폭증하는 엄청난 축복을 받습니다!";
                 } else if (text.includes("관리자") || text.includes("어드민") || text.includes("치트")) {
@@ -970,7 +987,7 @@
                     reply = "안녕하세요, 시현님! 시현클리커를 플레이해주셔서 감사합니다. 게임에 대해 궁금한 점이 있다면 무엇이든 물어보세요!";
                 } else {
                     const defaultReplies = [
-                        "흥미로운 질문이네요! 시현클리커의 환생, 레이드, 아이템, 도박 등에 대해 물어보시면 자세히 알려드릴게요.",
+                        "흥미로운 질문이네요! 시현클리커의 환생, 레이드, 아이템, 업적 시스템 등에 대해 물어보시면 자세히 알려드릴게요.",
                         "계속해서 쿠키를 클릭해 점수를 올리고, 상점에서 건물을 구매해 자동 생산량(SPS)을 높여보세요!",
                         "저는 게임 공식 가이드 AI입니다. 특정 시스템에 대해 궁금한 단어를 포함해서 질문해주시면 더 정확한 답변을 드릴 수 있어요."
                     ];
@@ -978,7 +995,7 @@
                 }
                 
                 addChatbotMessage('bot', reply);
-            }, 600); // 실제 AI가 생각하는 것처럼 0.6초 딜레이
+            }, 600);
         };
 
         function addChatbotMessage(sender, text, id = null) {
@@ -991,26 +1008,20 @@
             msgArea.scrollTop = msgArea.scrollHeight;
         }
 
-        // 🛡️ 시크릿 관리자 모드 커스텀 모달 띄우기 (방사능 방패 클릭 시)
         window.showAdminLoginModal = function() {
             document.getElementById('customAdminLoginModal').style.display = 'flex';
             document.getElementById('customAdminPwdInput').value = '';
             document.getElementById('customAdminPwdInput').focus();
         };
 
-        // 🛡️ 시크릿 관리자 로그인 실행
         window.submitCustomAdminLogin = function() {
             const pwd = document.getElementById('customAdminPwdInput').value.trim();
             if (pwd === "102030") {
                 document.getElementById('customAdminLoginModal').style.display = 'none';
                 sessionStorage.setItem('admin_access_granted', 'true');
-                
-                // URL vercel.app/admin 으로 변경
                 history.pushState(null, null, '/admin'); 
-                
                 alert("관리자 권한 승인 완료. 자동으로 시스템에 접속합니다.");
                 
-                // 관리자 아이디로 즉시 로그인 처리
                 document.getElementById('loginId').value = 'admin';
                 document.getElementById('loginPw').value = '102030';
                 document.getElementById('mainLoginBtn').click(); 
@@ -1059,16 +1070,16 @@
 
         window.triggerResetGame = async function() {
             if (!currentUserId) return;
-            if (confirm("🚨 경고: 정말로 모든 게임 진행 데이터(점수, 아이템, 유물, 환생)를 초기화하시겠습니까?")) {
+            if (confirm("🚨 경고: 정말로 모든 게임 진행 데이터(점수, 아이템, 업적, 환생)를 초기화하시겠습니까?")) {
                 score = 0; totalClicks = 0; prestigeCount = 0; cheatBonusSps = 0;
                 ownedCookieUpgrade = false; ownedScrollUpgrade = false;
-                relicsOwned = [false, false, false];
-                badgesUnlocked = { welcome: true, click100: false, cookieMaster: false, scrollMaster: false };
+                unlockedAchievements = {};
+                bugsRemovedCount = 0;
 
                 for (const k in items) { items[k].count = 0; items[k].cost = items[k].baseCost; }
                 await saveGameToServer();
                 alert("🔄 초기화가 성공적으로 집행되었습니다.");
-                buildShopUI(); buildRelicsUI(); updateDisplay(); refreshBadgesUI();
+                buildShopUI(); buildAchievementsUI(); updateDisplay();
             }
         };
 
@@ -1094,7 +1105,6 @@
         };
 
         window.handleLogin = async function() {
-            // 이시현님 전용: 계정이 없을 시 자동 가입 및 DB 복구 기능 탑재
             let id = document.getElementById('loginId').value.trim().toLowerCase().replace(/\s+/g, '');
             const pw = document.getElementById('loginPw').value.trim();
             const loginBtn = document.getElementById('mainLoginBtn');
@@ -1105,17 +1115,12 @@
             loginBtn.disabled = true;
 
             try {
-                // 1. Auth 세션 로그인 시도
                 let { error: authErr } = await gameDB.auth.signInWithPassword({ email: `${id}@clicker.com`, password: pw });
                 
-                // 2. 만약 계정이 없거나 에러가 났을 때 자동 회원가입 진행
                 if (authErr && (authErr.message.includes('Invalid login credentials') || authErr.message.includes('not found') || authErr.message.includes('Invalid'))) {
-                    
                     const { error: signUpError } = await gameDB.auth.signUp({ email: `${id}@clicker.com`, password: pw });
                     
-                    if (signUpError && !signUpError.message.includes('already registered')) {
-                        throw signUpError;
-                    }
+                    if (signUpError && !signUpError.message.includes('already registered')) throw signUpError;
 
                     await gameDB.from('users').upsert({
                         userId: id,
@@ -1130,7 +1135,6 @@
                     throw authErr; 
                 }
                 
-                // 3. 세션이 있는 상태에서 users 테이블 확인
                 const { data: ud, error: userErr } = await gameDB.from('users').select('*').eq('userId', id).maybeSingle();
                 
                 if(userErr || !ud) { 
@@ -1345,24 +1349,16 @@
                     cheatBonusSps: cheatBonusSps,
                     ownedCookieUpgrade: ownedCookieUpgrade,
                     ownedScrollUpgrade: ownedScrollUpgrade,
-                    relicsOwned: relicsOwned,
-                    badgesUnlocked: badgesUnlocked,
+                    unlockedAchievements: unlockedAchievements,
+                    bugsRemovedCount: bugsRemovedCount,
                     itemCounts: itemCountsObj
                 };
                 await gameDB.from('users').update({ gameSave: payload }).eq('userId', currentUserId);
             } catch(e) { console.error("백업 에러:", e); }
         };
 
-        // 🔥 중복 구독 방지 플래그 모음
-        let _noticeSub = false;
-        let _explosionSub = false;
-        let _rankingSub = false;
-        let _raidSub = false;
-        let _chatSub = false;
-        let _ticketSub = false;
-        let _mydataSub = false;
+        let _noticeSub = false, _explosionSub = false, _rankingSub = false, _raidSub = false, _chatSub = false, _ticketSub = false, _mydataSub = false;
 
-        // 🌟 Supabase Realtime: 새로고침 없는 실시간 공지사항 동기화
         function listenToLiveGlobalNotice() {
             if(_noticeSub) return; _noticeSub = true; 
             const fetchNotice = async () => {
@@ -1390,7 +1386,6 @@
             } catch(e) { alert("공지 배포 실패: " + e.message); }
         };
 
-        // 🌟 Supabase Realtime: 새로고침 없는 실시간 서버 폭발 동기화
         function listenToServerExplosionState() {
             if(_explosionSub) return; _explosionSub = true; 
             const fetchExplosion = async () => {
@@ -1411,7 +1406,6 @@
             }).subscribe();
         }
 
-        // 🛡️ 복구 암호 102030 적용
         window.executeManualServerRecovery = async function() {
             const inputKey = document.getElementById('serverExplosionRestoreKey').value.trim();
             if (inputKey === "102030") {
@@ -1460,7 +1454,6 @@
             };
             fetchRankings();
             
-            // 🌟 새로고침 없는 완벽한 실시간 랭킹 개별 데이터 업데이트
             gameDB.channel('public:users_ranking').on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, (payload) => {
                 const updatedUser = payload.new;
                 if (!updatedUser || !updatedUser.gameSave || updatedUser.isAdmin || updatedUser.isScoreLocked) return;
@@ -1514,7 +1507,6 @@
             rankingArea.innerHTML = newHtml;
         }, 100);
 
-        // 🌟 Supabase Realtime: 내 점 조작(뺏김, 초기화 등) 새로고침 없이 즉시 동기화 리스너
         function listenToMyDataChanges() {
             if(_mydataSub) return; _mydataSub = true;
             gameDB.channel('public:users:my_data').on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'users' }, (payload) => {
@@ -1603,10 +1595,7 @@
 
                 for (let i = 0; i < 4; i++) {
                     const { data } = await gameDB.from('users').select('*').eq('userId', currentUserId).maybeSingle();
-                    if (data) { 
-                        d = data; 
-                        break; 
-                    }
+                    if (data) { d = data; break; }
                     await new Promise(resolve => setTimeout(resolve, 500));
                 }
 
@@ -1622,14 +1611,11 @@
 
                 if(d.isPermanentBan || (d.banExpiry && d.banExpiry > Date.now())) { 
                     alert("🔴 정지 처리를 받은 계정입니다.");
-                    await gameDB.auth.signOut(); 
-                    location.reload(); 
-                    return; 
+                    await gameDB.auth.signOut(); location.reload(); return; 
                 }
                 
                 if (currentUserId === '이시현' || currentUserId === 'admin') {
-                    isUserSuperAdmin = true;
-                    isUserAdminPrivilege = true;
+                    isUserSuperAdmin = true; isUserAdminPrivilege = true;
                 } else {
                     isUserSuperAdmin = d.isSuperAdmin || false;
                     isUserAdminPrivilege = d.isAdmin || isUserSuperAdmin || false;
@@ -1637,9 +1623,7 @@
 
                 isUserScoreLocked = d.isScoreLocked || false; 
                 
-                if (isUserAdminPrivilege) {
-                    document.getElementById('adminChatClearBtn').style.display = 'inline-block';
-                }
+                if (isUserAdminPrivilege) { document.getElementById('adminChatClearBtn').style.display = 'inline-block'; }
 
                 const s = d.gameSave || {};
                 score = (isUserAdminPrivilege || isUserScoreLocked) ? 0 : (Number(s.score) || 0); 
@@ -1649,8 +1633,9 @@
                 ownedCookieUpgrade = s.ownedCookieUpgrade || false; 
                 ownedScrollUpgrade = s.ownedScrollUpgrade || false;
                 
-                if(s.relicsOwned) relicsOwned = s.relicsOwned;
-                if(s.badgesUnlocked) badgesUnlocked = s.badgesUnlocked;
+                unlockedAchievements = s.unlockedAchievements || {};
+                bugsRemovedCount = s.bugsRemovedCount || 0;
+
                 if(s.itemCounts) {
                     for(const k in items) {
                         if(s.itemCounts[k] !== undefined) {
@@ -1663,7 +1648,7 @@
                 document.getElementById('navUserId').innerText = currentUserId;
                 document.getElementById('authOverlay').style.display = 'none';
 
-                buildShopUI(); buildRelicsUI(); updateDisplay(); refreshBadgesUI(); 
+                buildShopUI(); buildAchievementsUI(); updateDisplay(); 
                 
                 loadChatMessages();
                 listenToGlobalRaidState(); 
@@ -1673,17 +1658,14 @@
                 listenToMyDataChanges();
                 
                 startGoldenCookieEngine(); 
+                startBugSpawner(); // 버그 등장 시작
                 setInterval(saveGameToServer, 15000);
 
                 isGameBooted = true; 
 
                 const btn = document.getElementById('mainLoginBtn');
-                if (btn) {
-                    btn.innerText = "게임 접속하기";
-                    btn.disabled = false;
-                }
+                if (btn) { btn.innerText = "게임 접속하기"; btn.disabled = false; }
 
-                // 🌟 관리자 권한을 통해 들어온 경우 패널 바로 띄우기
                 if (sessionStorage.getItem('admin_access_granted') === 'true') {
                     document.getElementById('reopenAdminBtn').style.display = 'block';
                     openAdminModal();
@@ -1696,24 +1678,105 @@
             }
         }
 
-        gameDB.auth.getSession().then(({ data: { session } }) => {
-            initializeAppWithSession(session);
-        });
+        gameDB.auth.getSession().then(({ data: { session } }) => { initializeAppWithSession(session); });
 
         gameDB.auth.onAuthStateChange((event, session) => {
-            if (event === 'SIGNED_IN') {
-                initializeAppWithSession(session);
-            } else if (event === 'SIGNED_OUT') {
-                isGameBooted = false;
-                initializeAppWithSession(null);
-            }
+            if (event === 'SIGNED_IN') { initializeAppWithSession(session); } 
+            else if (event === 'SIGNED_OUT') { isGameBooted = false; initializeAppWithSession(null); }
         });
 
-        function refreshBadgesUI() {
-            for(const bk in badgesUnlocked) {
-                const el = document.getElementById('mini_badge_' + bk);
-                if(el && badgesUnlocked[bk]) el.classList.add('unlocked');
+        // --- 업적 시스템 및 UI 구축 ---
+        function buildAchievementsUI() {
+            const root = document.getElementById('achievementGrid');
+            if(!root) return;
+            root.innerHTML = '';
+            achievementData.forEach(ach => {
+                const isUnlocked = unlockedAchievements[ach.id];
+                const div = document.createElement('div');
+                div.className = `achievement-item ${isUnlocked ? 'unlocked' : ''}`;
+                const rareBadge = ach.type === '희귀' ? '<span style="color:#eab308; font-size:9px;">[희귀]</span> ' : '';
+                
+                div.innerHTML = `
+                    <div class="achieve-name">${rareBadge}${ach.name}</div>
+                    <div class="achieve-cond">${ach.condition}</div>
+                    ${isUnlocked ? `<div class="achieve-desc">${ach.desc}</div>` : `<div class="achieve-desc" style="color:var(--text-sub);">???</div>`}
+                `;
+                root.appendChild(div);
+            });
+        }
+
+        let achieveCheckThrottle = false;
+        function checkAchievements() {
+            if (achieveCheckThrottle || isUserAdminPrivilege || isUserScoreLocked) return;
+            achieveCheckThrottle = true;
+            setTimeout(() => achieveCheckThrottle = false, 500); 
+
+            let newlyUnlocked = false;
+            const sps = getCurrentSps();
+            const totalUpgrades = Object.values(items).reduce((sum, item) => sum + item.count, 0);
+            const aiCount = items['item5'].count; // AI 직원 갯수
+
+            const check = (id, condition) => {
+                if (condition && !unlockedAchievements[id]) {
+                    unlockedAchievements[id] = true;
+                    newlyUnlocked = true;
+                    const ach = achievementData.find(a => a.id === id);
+                    alert(`🏆 업적 달성: [${ach.name}]\n"${ach.desc}"`);
+                }
+            };
+
+            check('helloWorld', totalClicks >= 1);
+            check('keyboardWarrior', totalClicks >= 100);
+            check('caffeine', totalClicks >= 1000);
+            check('nightDev', totalClicks >= 10000);
+            check('codeMaster', totalClicks >= 100000);
+            
+            check('firstDeploy', totalUpgrades >= 1);
+            check('noDowntime', totalUpgrades >= 50);
+            
+            check('serverAdmin', sps > 0);
+            check('devOps', sps >= 100);
+            check('startup', sps >= 1000);
+            check('investment', sps >= 10000);
+            
+            check('aiUser', aiCount >= 1);
+            check('aiAddict', aiCount >= 100);
+            
+            check('bugHunter', bugsRemovedCount >= 10);
+            check('debuggingGod', bugsRemovedCount >= 1000);
+
+            if (newlyUnlocked) {
+                buildAchievementsUI();
+                saveGameToServer();
             }
+        }
+
+        function startBugSpawner() {
+            setInterval(() => {
+                if(!currentUserSession || isUserAdminPrivilege || isUserScoreLocked) return;
+                if(Math.random() > 0.4) return; // 8초마다 40% 확률로 등장
+                
+                const leftPanel = document.getElementById('leftPanel');
+                const bug = document.createElement('div');
+                bug.className = 'bug-entity';
+                bug.innerText = '🐛';
+                
+                const randomX = Math.floor(Math.random() * (leftPanel.offsetWidth - 40)) + 10;
+                const randomY = Math.floor(Math.random() * (leftPanel.offsetHeight - 180)) + 100;
+                bug.style.left = randomX + 'px';
+                bug.style.top = randomY + 'px';
+                
+                bug.onclick = function(event) {
+                    event.stopPropagation();
+                    bugsRemovedCount++;
+                    updateDisplay();
+                    checkAchievements();
+                    bug.remove();
+                };
+                
+                leftPanel.appendChild(bug);
+                setTimeout(() => { if(bug.parentNode) bug.remove(); }, 4000);
+            }, 8000);
         }
 
         function startGoldenCookieEngine() {
@@ -1755,8 +1818,7 @@
 
             let sps = 0;
             for (const key in items) { sps += items[key].count * items[key].spsValue; }
-            relicsOwned.forEach((o, i) => { if(o) sps += relicBonusValues[i]; });
-            if(ownedScrollUpgrade) sps += relicsOwned.filter(Boolean).length * 2500;
+            if(ownedScrollUpgrade) sps += 5000;
             sps += prestigeCount * 10000 + cheatBonusSps;
             return sps;
         }
@@ -1784,10 +1846,6 @@
             container.appendChild(ft);
             setTimeout(() => ft.remove(), 800);
 
-            if(totalClicks >= 100 && !badgesUnlocked.click100) {
-                badgesUnlocked.click100 = true; alert("🏆 누적 클릭 100회 달성!"); refreshBadgesUI();
-            }
-
             if (globalRaidActive && globalRaidHp > 0) {
                 let dmgAmt = gain * 500000; 
                 try {
@@ -1801,6 +1859,7 @@
             }
 
             updateDisplay();
+            checkAchievements();
         };
 
         async function triggerRaidVictoryReward() {
@@ -1950,17 +2009,8 @@
                     buildShopUI();
                 } else { alert("아이템 개수가 부족하여 판매할 수 없습니다."); }
             }
+            checkAchievements();
         };
-
-        function buildRelicsUI() {
-            const root = document.getElementById('relicsRoot'); root.innerHTML = '';
-            relicsList.forEach((r, idx) => {
-                const div = document.createElement('div');
-                div.className = `relic-item-row ${relicsOwned[idx] ? 'owned' : ''}`;
-                div.innerHTML = `<span>🔮 ${r.name} (+${r.val.toLocaleString()} SPS)</span><strong>${relicsOwned[idx] ? '활성화' : '미획득'}</strong>`;
-                root.appendChild(div);
-            });
-        }
 
         window.buySpecial = function(type) {
             if (isUserAdminPrivilege || isUserScoreLocked) return;
@@ -1969,7 +2019,7 @@
                 ownedCookieUpgrade = true; alert("수련 완료! 클릭 효율 5배 증가"); updateDisplay();
             } else if(type === 'scroll' && !ownedScrollUpgrade && (isAdminAuthenticated || score >= 30000)) {
                 if (!isAdminAuthenticated) score -= 30000; 
-                ownedScrollUpgrade = true; alert("비급 터득 완료!"); updateDisplay();
+                ownedScrollUpgrade = true; alert("최적화 알고리즘 터득 완료! (SPS 대폭 증가)"); updateDisplay();
             } else { alert("조건이 맞지 않거나 자원이 부족합니다."); }
         };
 
@@ -1983,9 +2033,7 @@
                 if(confirm(`초월 환생을 진행하시겠습니까?`)) {
                     score = 0; prestigeCount++;
                     for(const k in items) { items[k].count = 0; items[k].cost = items[k].baseCost; }
-                    const rolledIdx = Math.floor(Math.random() * relicsOwned.length);
-                    relicsOwned[rolledIdx] = true;
-                    buildShopUI(); buildRelicsUI(); updateDisplay(); saveGameToServer();
+                    buildShopUI(); updateDisplay(); saveGameToServer();
                 }
             } else { alert(`시현 점수가 부족합니다.`); }
         };
@@ -2008,6 +2056,7 @@
             document.getElementById('scoreDisplay').innerText = `${Math.floor(score).toLocaleString()} 시현`;
             document.getElementById('centerClicksVal').innerText = totalClicks.toLocaleString();
             document.getElementById('centerPrestigeVal').innerText = prestigeCount.toLocaleString();
+            document.getElementById('centerBugsVal').innerText = bugsRemovedCount.toLocaleString();
 
             let sps = getCurrentSps();
             document.getElementById('centerSpsVal').innerText = sps.toFixed(1).toLocaleString();
@@ -2038,6 +2087,7 @@
                 else { globalRaidHp = targetHp; }
             }
             updateDisplay();
+            checkAchievements();
         }, 100);
 
         setInterval(async () => {
