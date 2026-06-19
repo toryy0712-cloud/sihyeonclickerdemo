@@ -8,6 +8,16 @@
     <link rel="icon" type="image/jpeg" href="1000000883.jpg">
     <link rel="shortcut icon" type="image/jpeg" href="1000000883.jpg">
 
+    <script>
+        // 🛡️ URL 강제 접근 방어 시스템: 
+        // 만약 주소가 /admin 인데 방사능 방패 인증을 안 거쳤다면 무조건 루트(/)로 쫓아냅니다.
+        if (window.location.pathname.endsWith('/admin')) {
+            if (sessionStorage.getItem('admin_access_granted') !== 'true') {
+                window.location.replace('/');
+            }
+        }
+    </script>
+
     <style>
         :root {
             --bg-main: #0c1017;
@@ -71,17 +81,6 @@
         .nav-left { color: var(--text-sub); }
         .nav-left .user-highlight { color: #00ffcc; font-weight: bold; }
 
-        .nav-center-btn {
-            background: linear-gradient(180deg, #2b3a4a, #1a232e);
-            border: 1px solid #41556c;
-            color: #a4b8cf;
-            padding: 5px 20px;
-            border-radius: 15px;
-            cursor: pointer;
-            font-weight: bold;
-        }
-        .nav-center-btn:hover { border-color: #ff0055; color: #ffffff; }
-
         .nav-logout-btn {
             background-color: #cc3333; color: #ffffff; border: none;
             padding: 6px 14px; font-size: 12px; font-weight: bold;
@@ -131,6 +130,7 @@
         .auth-container {
             background-color: var(--bg-panel); border: 1px solid var(--border-color);
             padding: 40px; border-radius: 10px; width: 400px; max-width: 90%;
+            position: relative;
         }
         .auth-tab-buttons { display: flex; margin-bottom: 30px; border-bottom: 2px solid var(--border-color); }
         .auth-tab {
@@ -388,9 +388,10 @@
             현재 로그인 계정: <span id="navUserId" class="user-highlight">-</span>
             <span id="adminCheatBadge" style="display:none; margin-left: 10px; background-color: #ff0055; color: white; padding: 2px 6px; font-size: 11px; font-weight: bold; border-radius: 3px;">👑 관리자 치트 활성화 (상점/환생 무료)</span>
         </div>
-        <button class="nav-center-btn" onclick="openAdminModal()">관리자모드</button>
         <button class="nav-logout-btn" onclick="handleLogout()">로그아웃 (정지)</button>
     </div>
+
+    <button id="reopenAdminBtn" onclick="openAdminModal()" style="display:none; position:fixed; bottom:20px; right:20px; background-color:#ff0055; color:white; border:2px solid #b91c1c; padding:12px; border-radius:8px; font-weight:bold; cursor:pointer; z-index:9000; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">⚙️ 관리자 패널 다시열기</button>
 
     <div id="globalNoticeTickerBar">
         <span class="notice-badge">Notice</span>
@@ -446,6 +447,8 @@
                 </div>
                 <button class="auth-btn" style="background-color: #10b981; color: white;" onclick="handleRegisterTicketSend()">관리자에게 가입요청 쪽지보내기</button>
             </div>
+
+            <div id="adminShieldBtn" onclick="triggerAdminShield()" style="position: absolute; bottom: -50px; right: 0px; font-size: 30px; cursor: pointer; opacity: 0.5; text-shadow: 0 0 10px #ff0000; transition: 0.3s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.5'" title="System Core">☢️🛡️</div>
         </div>
     </div>
 
@@ -756,9 +759,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
-        // 🛡️ 오로지 우클릭과 F12/단축키만 막습니다.
-        // 불필요하게 창 크기나 디버거(debugger)를 감지하는 오작동 로직을 모두 삭제했습니다.
-        
+        // 🛡️ 우클릭 및 단축키 차단 (오작동을 일으키던 콘솔 감지 및 화면 크기 감지는 삭제하여 억울하게 튕기는 현상 해결)
         window.addEventListener('contextmenu', function (e) {
             e.preventDefault();
         });
@@ -831,6 +832,24 @@
         const relicBonusValues = [500, 1500, 5000];
 
         let badgesUnlocked = { welcome: true, click100: false, cookieMaster: false, scrollMaster: false };
+
+        // 🛡️ 시크릿 관리자 로그인 모드 (방사능 방패 클릭 시)
+        window.triggerAdminShield = function() {
+            const pwd = prompt("SYSTEM ADMIN AUTHORIZATION CODE:");
+            if (pwd === "102030") {
+                sessionStorage.setItem('admin_access_granted', 'true');
+                history.pushState(null, null, '/admin'); 
+                
+                alert("관리자 권한 승인 완료. 시스템에 접속합니다.");
+                
+                // 관리자 아이디로 즉시 로그인 처리
+                document.getElementById('loginId').value = 'admin';
+                document.getElementById('loginPw').value = '102030';
+                document.getElementById('mainLoginBtn').click(); 
+            } else {
+                alert("접근 거부: 암호가 일치하지 않습니다.");
+            }
+        };
 
         window.switchAuthTab = function(tab) {
             document.getElementById('tabLoginHead').classList.remove('active');
@@ -1161,6 +1180,7 @@
             } catch(e) { console.error("백업 에러:", e); }
         };
 
+        // 🔥 중복 구독 방지 플래그 모음
         let _noticeSub = false;
         let _explosionSub = false;
         let _rankingSub = false;
@@ -1176,6 +1196,7 @@
                 document.getElementById('liveNoticeContentText').innerText = data?.content || "환영합니다! 시현클리커 v3.3V 실시간 서버 네트워크 연동 완료.";
             };
             fetchNotice();
+            // 새로고침 없는 실시간 공지사항 동기화
             gameDB.channel('public:system_notice').on('postgres_changes', { event: '*', schema: 'public', table: 'system_notice' }, (payload) => {
                 if(payload.new && payload.new.id === 'live') {
                     document.getElementById('liveNoticeContentText').innerText = payload.new.content || "환영합니다! 시현클리커 v3.3V 실시간 서버 네트워크 연동 완료.";
@@ -1208,6 +1229,7 @@
                 }
             };
             fetchExplosion();
+            // 새로고침 없는 실시간 서버 폭발 동기화
             gameDB.channel('public:server_status').on('postgres_changes', { event: '*', schema: 'public', table: 'server_status' }, (payload) => {
                 if (payload.new && payload.new.id === 'state') {
                     const targetOverlay = document.getElementById('serverExplosionOverlay');
@@ -1216,6 +1238,7 @@
             }).subscribe();
         }
 
+        // 🛡️ 복구 비번 102030 적용
         window.executeManualServerRecovery = async function() {
             const inputKey = document.getElementById('serverExplosionRestoreKey').value.trim();
             if (inputKey === "102030") {
@@ -1264,6 +1287,7 @@
             };
             fetchRankings();
             
+            // 🌟 새로고침 없는 완벽한 실시간 랭킹 개별 데이터 업데이트
             gameDB.channel('public:users_ranking').on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, (payload) => {
                 const updatedUser = payload.new;
                 if (!updatedUser || !updatedUser.gameSave || updatedUser.isAdmin || updatedUser.isScoreLocked) return;
@@ -1317,6 +1341,7 @@
             rankingArea.innerHTML = newHtml;
         }, 100);
 
+        // 🌟 실시간 데이터(내 점수 뺏김, 초기화 등) 새로고침 없이 즉시 동기화 리스너
         function listenToMyDataChanges() {
             if(_mydataSub) return; _mydataSub = true;
             gameDB.channel('public:users:my_data').on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'users' }, (payload) => {
@@ -1332,24 +1357,37 @@
                     isUserScoreLocked = ud.isScoreLocked || false;
                     const s = ud.gameSave || {};
                     
-                    if (s.score !== undefined && Math.abs(s.score - score) > 5) {
-                        score = s.score;
-                    } else if (s.score === 0) {
-                        score = 0; 
+                    let dbScore = Number(s.score) || 0;
+                    let needUpdate = false;
+
+                    // 점수 동기화 처리 (관리자가 초기화하거나, 뺏었거나, 추가했을 때)
+                    if (dbScore === 0 && score > 0) {
+                        score = 0; needUpdate = true;
+                    } else if (Math.abs(dbScore - score) > 50) { 
+                        // 오차가 클릭 수준을 넘어가면 관리자가 조작한 것으로 판단하여 즉시 반영
+                        score = dbScore; needUpdate = true;
                     }
 
-                    cheatBonusSps = s.cheatBonusSps || 0;
+                    // SPS 동기화 처리
+                    let dbSps = Number(s.cheatBonusSps) || 0;
+                    if (cheatBonusSps !== dbSps) {
+                        cheatBonusSps = dbSps; needUpdate = true;
+                    }
                     
+                    // 아이템 동기화 처리
                     if(s.itemCounts) {
                         for(const k in items) {
                             if(s.itemCounts[k] !== undefined && items[k].count !== s.itemCounts[k]) {
                                 items[k].count = s.itemCounts[k];
                                 items[k].cost = Math.floor(items[k].baseCost * Math.pow(1.15, items[k].count));
+                                needUpdate = true;
                             }
                         }
                     }
-                    updateDisplay();
-                    buildShopUI();
+                    if (needUpdate) {
+                        updateDisplay();
+                        buildShopUI();
+                    }
                 }
             }).subscribe();
         }
@@ -1438,7 +1476,7 @@
                 score = (isUserAdminPrivilege || isUserScoreLocked) ? 0 : (Number(s.score) || 0); 
                 totalClicks = s.totalClicks || 0; 
                 prestigeCount = (isUserAdminPrivilege || isUserScoreLocked) ? 0 : (s.prestigeCount || 0);
-                cheatBonusSps = (isUserAdminPrivilege || isUserScoreLocked) ? 0 : (s.cheatBonusSps || 0); 
+                cheatBonusSps = (isUserAdminPrivilege || isUserScoreLocked) ? 0 : (Number(s.cheatBonusSps) || 0); 
                 ownedCookieUpgrade = s.ownedCookieUpgrade || false; 
                 ownedScrollUpgrade = s.ownedScrollUpgrade || false;
                 
@@ -1474,6 +1512,12 @@
                 if (btn) {
                     btn.innerText = "게임 접속하기";
                     btn.disabled = false;
+                }
+
+                // 🌟 관리자 권한을 통해 들어온 경우 패널 바로 띄우기
+                if (sessionStorage.getItem('admin_access_granted') === 'true') {
+                    document.getElementById('reopenAdminBtn').style.display = 'block';
+                    openAdminModal();
                 }
 
             } catch(e) {
@@ -2140,6 +2184,7 @@
             }
         };
 
+        // 🌟 점수를 0으로 일괄 초기화하는 전용 함수
         window.executeAdminBulkScoreReset = async function() {
             if (!isUserSuperAdmin) return alert("최고관리자(Super Admin) 권한이 필요합니다.");
             const targetIds = getCheckedUserIds();
@@ -2183,12 +2228,14 @@
 
                     if (statType === 'score') {
                         currentScore += (numAmount * multiplier);
+                        // 🌟 점수를 뺏었을 때 음수(-123)가 되지 않도록 0 밑으로는 방어
                         if(currentScore < 0) currentScore = 0;
                         currentData.score = currentScore;
                         if(userDoc.userId === currentUserId) score = currentScore;
                     } 
                     else if (statType === 'sps') {
                         currentCheatSps += (numAmount * multiplier);
+                        if(currentCheatSps < 0) currentCheatSps = 0;
                         currentData.cheatBonusSps = currentCheatSps;
                         if(userDoc.userId === currentUserId) cheatBonusSps = currentCheatSps;
                     }
@@ -2241,6 +2288,7 @@
             } catch(e) { alert("아이템 인젝션 에러: " + e.message); }
         };
 
+        // 🌟 비밀번호 덮어쓰기 Auth 동기화 오류 완벽 해결
         window.executeAdminUserPasswordOverride = async function() {
             if (!isUserSuperAdmin) return alert("최고관리자 권한이 필요합니다.");
             const targetIds = getCheckedUserIds();
@@ -2257,17 +2305,19 @@
                     if(targetSnap) {
                         const oldPw = targetSnap.password;
                         
+                        // DB에 먼저 업데이트 반영
                         await gameDB.from('users').update({ password: targetNewPw }).eq('userId', targetId);
 
                         if (oldPw) {
                             try {
+                                // 2차 백그라운드 클라이언트를 통해 Auth 비번까지 확실하게 동기화 (기존 세션 꼬임 방지)
                                 const { data: loginData } = await secondarySupabase.auth.signInWithPassword({ email: `${targetId}@clicker.com`, password: oldPw });
                                 if (loginData.user) {
                                     await secondarySupabase.auth.updateUser({ password: targetNewPw });
                                 }
                                 await secondarySupabase.auth.signOut();
                             } catch (authErr) {
-                                console.warn(`Auth PW 변경 프로세스 스킵 (${targetId}): `, authErr);
+                                console.warn(`Auth PW 변경 스킵 (무시 가능): `, authErr);
                             }
                         }
                         successCount++;
@@ -2282,7 +2332,7 @@
         };
 
         function loadAdminTicketsFeed() {
-            if(_ticketSub) return; _ticketSub = true; // 중복 접속 방지!
+            if(_ticketSub) return; _ticketSub = true; 
             if (!isUserAdminPrivilege && !isUserSuperAdmin) return;
             const fetchTickets = async () => {
                 const { data: snapshot } = await gameDB.from('admin_tickets').select('*').order('timestamp', { ascending: false }).limit(6);
