@@ -756,12 +756,13 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
-        // 🛡️ 우클릭 방어
+        // 🛡️ 오로지 우클릭과 F12/단축키만 막습니다.
+        // 불필요하게 창 크기나 디버거(debugger)를 감지하는 오작동 로직을 모두 삭제했습니다.
+        
         window.addEventListener('contextmenu', function (e) {
             e.preventDefault();
         });
 
-        // 🛡️ 개발자 도구 단축키 원천 차단
         window.addEventListener('keydown', function (e) {
             if (e.key === "F12" || 
                (e.ctrlKey && e.shiftKey && (e.key === "I" || e.key === "i" || e.key === "C" || e.key === "c" || e.key === "J" || e.key === "j")) || 
@@ -772,21 +773,6 @@
                 return false;
             }
         });
-
-        // 🛡️ 브라우저 메뉴를 통한 개발자 도구 진입 우회 차단 (해킹 방어 강화)
-        const devtools = function() {};
-        devtools.toString = function() {
-            document.getElementById('hackerOverlay').style.display = 'flex';
-            return '';
-        };
-        setInterval(function() {
-            console.profile(devtools);
-            console.profileEnd(devtools);
-            // 창 크기가 비정상적으로 줄어들면(개발자 도구가 도킹되었을 때) 차단
-            if (window.outerWidth - window.innerWidth > 160 || window.outerHeight - window.innerHeight > 160) {
-                document.getElementById('hackerOverlay').style.display = 'flex';
-            }
-        }, 1000);
 
         // --- Supabase 초기화 설정 ---
         const supabaseUrl = 'https://efwymlndmqkpgxuuwhvu.supabase.co';
@@ -2296,7 +2282,7 @@
         };
 
         function loadAdminTicketsFeed() {
-            if(_ticketSub) return; _ticketSub = true; 
+            if(_ticketSub) return; _ticketSub = true; // 중복 접속 방지!
             if (!isUserAdminPrivilege && !isUserSuperAdmin) return;
             const fetchTickets = async () => {
                 const { data: snapshot } = await gameDB.from('admin_tickets').select('*').order('timestamp', { ascending: false }).limit(6);
