@@ -1,5 +1,5 @@
 // 파일 위치: api/chat.js
-export default async function handler(req, res) {
+module.exports = async function(req, res) {
     if (req.method !== 'POST') {
         return res.status(405).json({ error: '허용되지 않은 요청입니다.' });
     }
@@ -38,4 +38,4 @@ export default async function handler(req, res) {
     } catch (error) {
         res.status(500).json({ error: '구글 API 통신 중 오류가 발생했습니다.' });
     }
-}
+};
