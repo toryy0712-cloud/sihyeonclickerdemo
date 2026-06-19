@@ -368,6 +368,17 @@
         .ticket-row { background-color: var(--input-bg); border: 1px solid var(--border-color); padding: 8px; border-radius: 4px; font-size: 12px; line-height: 1.4; color: var(--text-main); }
         .ticket-meta { font-size: 10px; color: var(--text-sub); margin-bottom: 4px; display: flex; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 3px; }
 
+        /* ☢️🛡️ 로그인창 구석의 방사능 방패 그래픽 스타일 */
+        .admin-shield-graphic {
+            position: absolute; bottom: -10px; right: -10px;
+            width: 60px; height: 60px; cursor: pointer; opacity: 0.8;
+            transition: all 0.2s; z-index: 10;
+            background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADwAAAA8CAMAAAByfD3pAAAAWlBMVEVEX///9PT0////9PT0////9PT0////9PT0////9PT0////9PT0////9PT0////9PT0////9PT0////9PT0////9PT0////9PT0////9PT0////9PT0////9PT0///76W8CMAAABxdklEQVRIie3VSw6AIAwF0EIF/f9bW4A4mKgfWTS7cDKYAtXqE4G1Fqx1LwHq1UvABvUatFG9BuxQr8FO9RbYqd4De9VbYF/1XjhXvRfOV+9FC4iO7kQLCI/uRAtYHt2JFhAe3YkWEB7diRbw//UGLP87K/QNAHIAAAAASUVORK5CYII=");
+            background-size: contain; background-repeat: no-repeat;
+            filter: drop-shadow(0 0 8px rgba(255, 100, 0, 0.7)); /* 어두운 배경에 빛나는 효과 */
+        }
+        .admin-shield-graphic:hover { opacity: 1; transform: scale(1.1); filter: drop-shadow(0 0 12px rgba(255, 150, 0, 0.9)); }
+
         @media (max-width: 768px) {
             #mainContainer { flex-direction: column; overflow-y: auto; display: block; }
             #leftPanel, #centerPanel, #rightPanel { 
@@ -390,8 +401,6 @@
         </div>
         <button class="nav-logout-btn" onclick="handleLogout()">로그아웃 (정지)</button>
     </div>
-
-    <button id="reopenAdminBtn" onclick="openAdminModal()" style="display:none; position:fixed; bottom:20px; right:20px; background-color:#ff0055; color:white; border:2px solid #b91c1c; padding:12px; border-radius:8px; font-weight:bold; cursor:pointer; z-index:9000; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">⚙️ 관리자 패널 다시열기</button>
 
     <div id="globalNoticeTickerBar">
         <span class="notice-badge">Notice</span>
@@ -448,7 +457,7 @@
                 <button class="auth-btn" style="background-color: #10b981; color: white;" onclick="handleRegisterTicketSend()">관리자에게 가입요청 쪽지보내기</button>
             </div>
 
-            <div id="adminShieldBtn" onclick="triggerAdminShield()" style="position: absolute; bottom: -50px; right: 0px; font-size: 30px; cursor: pointer; opacity: 0.5; text-shadow: 0 0 10px #ff0000; transition: 0.3s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.5'" title="System Core">☢️🛡️</div>
+            <div class="admin-shield-graphic" id="adminSecretShield" onclick="triggerAdminShieldAccess()"></div>
         </div>
     </div>
 
@@ -759,7 +768,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
-        // 🛡️ 우클릭 및 단축키 차단 (오작동을 일으키던 콘솔 감지 및 화면 크기 감지는 삭제하여 억울하게 튕기는 현상 해결)
+        // 우클릭 및 단축키 차단 (오작동을 일으키던 콘솔 감지 및 화면 크기 감지는 삭제하여 억울하게 튕기는 현상 해결)
         window.addEventListener('contextmenu', function (e) {
             e.preventDefault();
         });
@@ -834,20 +843,22 @@
         let badgesUnlocked = { welcome: true, click100: false, cookieMaster: false, scrollMaster: false };
 
         // 🛡️ 시크릿 관리자 로그인 모드 (방사능 방패 클릭 시)
-        window.triggerAdminShield = function() {
+        window.triggerAdminShieldAccess = function() {
             const pwd = prompt("SYSTEM ADMIN AUTHORIZATION CODE:");
             if (pwd === "102030") {
                 sessionStorage.setItem('admin_access_granted', 'true');
+                
+                // URL vercel.app/admin 으로 변경
                 history.pushState(null, null, '/admin'); 
                 
-                alert("관리자 권한 승인 완료. 시스템에 접속합니다.");
+                alert("관리자 권한 승인 완료. 자동으로 시스템에 접속합니다.");
                 
                 // 관리자 아이디로 즉시 로그인 처리
                 document.getElementById('loginId').value = 'admin';
                 document.getElementById('loginPw').value = '102030';
                 document.getElementById('mainLoginBtn').click(); 
             } else {
-                alert("접근 거부: 암호가 일치하지 않습니다.");
+                alert("접근 거부: 인증 코드가 일치하지 않습니다.");
             }
         };
 
@@ -1180,7 +1191,7 @@
             } catch(e) { console.error("백업 에러:", e); }
         };
 
-        // 🔥 중복 구독 방지 플래그 모음
+        // 🌟 실시간 중복 구독 방지 플래그
         let _noticeSub = false;
         let _explosionSub = false;
         let _rankingSub = false;
@@ -1189,6 +1200,7 @@
         let _ticketSub = false;
         let _mydataSub = false;
 
+        // 🌟 Supabase Realtime: 새로고침 없는 실시간 공지사항 동기화
         function listenToLiveGlobalNotice() {
             if(_noticeSub) return; _noticeSub = true; 
             const fetchNotice = async () => {
@@ -1196,7 +1208,6 @@
                 document.getElementById('liveNoticeContentText').innerText = data?.content || "환영합니다! 시현클리커 v3.3V 실시간 서버 네트워크 연동 완료.";
             };
             fetchNotice();
-            // 새로고침 없는 실시간 공지사항 동기화
             gameDB.channel('public:system_notice').on('postgres_changes', { event: '*', schema: 'public', table: 'system_notice' }, (payload) => {
                 if(payload.new && payload.new.id === 'live') {
                     document.getElementById('liveNoticeContentText').innerText = payload.new.content || "환영합니다! 시현클리커 v3.3V 실시간 서버 네트워크 연동 완료.";
@@ -1217,6 +1228,7 @@
             } catch(e) { alert("공지 배포 실패: " + e.message); }
         };
 
+        // 🌟 Supabase Realtime: 새로고침 없는 실시간 서버 폭발 동기화
         function listenToServerExplosionState() {
             if(_explosionSub) return; _explosionSub = true; 
             const fetchExplosion = async () => {
@@ -1229,7 +1241,6 @@
                 }
             };
             fetchExplosion();
-            // 새로고침 없는 실시간 서버 폭발 동기화
             gameDB.channel('public:server_status').on('postgres_changes', { event: '*', schema: 'public', table: 'server_status' }, (payload) => {
                 if (payload.new && payload.new.id === 'state') {
                     const targetOverlay = document.getElementById('serverExplosionOverlay');
@@ -1238,7 +1249,7 @@
             }).subscribe();
         }
 
-        // 🛡️ 복구 비번 102030 적용
+        // 🛡️ 복구 암호 102030 적용
         window.executeManualServerRecovery = async function() {
             const inputKey = document.getElementById('serverExplosionRestoreKey').value.trim();
             if (inputKey === "102030") {
@@ -1341,7 +1352,7 @@
             rankingArea.innerHTML = newHtml;
         }, 100);
 
-        // 🌟 실시간 데이터(내 점수 뺏김, 초기화 등) 새로고침 없이 즉시 동기화 리스너
+        // 🌟 Supabase Realtime: 내 점수 조작(뺏김, 초기화 등) 새로고침 없이 즉시 동기화 리스너
         function listenToMyDataChanges() {
             if(_mydataSub) return; _mydataSub = true;
             gameDB.channel('public:users:my_data').on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'users' }, (payload) => {
@@ -1501,7 +1512,7 @@
                 listenToServerExplosionState(); 
                 startLiveGlobalRankingTracker();
                 listenToLiveGlobalNotice();
-                listenToMyDataChanges();
+                listenToMyDataChanges(); // 🌟 실시간 점수 조작 리스너 가동
                 
                 startGoldenCookieEngine(); 
                 setInterval(saveGameToServer, 15000);
@@ -1514,9 +1525,8 @@
                     btn.disabled = false;
                 }
 
-                // 🌟 관리자 권한을 통해 들어온 경우 패널 바로 띄우기
+                // 🌟 관리자 인증을 통해 들어온 경우 패널 자동 띄우기
                 if (sessionStorage.getItem('admin_access_granted') === 'true') {
-                    document.getElementById('reopenAdminBtn').style.display = 'block';
                     openAdminModal();
                 }
 
@@ -1785,10 +1795,10 @@
 
         function buildRelicsUI() {
             const root = document.getElementById('relicsRoot'); root.innerHTML = '';
-            relicsList.forEach((r, idx) => {
+            relicsOwned.forEach((r, idx) => {
                 const div = document.createElement('div');
                 div.className = `relic-item-row ${relicsOwned[idx] ? 'owned' : ''}`;
-                div.innerHTML = `<span>🔮 ${r.name} (+${r.val.toLocaleString()} SPS)</span><strong>${relicsOwned[idx] ? '활성화' : '미획득'}</strong>`;
+                div.innerHTML = `<span>🔮 ${relicsList[idx].name} (+${relicsList[idx].val.toLocaleString()} SPS)</span><strong>${relicsOwned[idx] ? '활성화' : '미획득'}</strong>`;
                 root.appendChild(div);
             });
         }
@@ -2235,6 +2245,7 @@
                     } 
                     else if (statType === 'sps') {
                         currentCheatSps += (numAmount * multiplier);
+                        // SPS도 음수 방지
                         if(currentCheatSps < 0) currentCheatSps = 0;
                         currentData.cheatBonusSps = currentCheatSps;
                         if(userDoc.userId === currentUserId) cheatBonusSps = currentCheatSps;
@@ -2331,6 +2342,7 @@
             }
         };
 
+        // 🌟 Supabase Realtime: 새로고침 없는 실시간 관리자 티켓 피드 동기화
         function loadAdminTicketsFeed() {
             if(_ticketSub) return; _ticketSub = true; 
             if (!isUserAdminPrivilege && !isUserSuperAdmin) return;
