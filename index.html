@@ -405,7 +405,7 @@
         .ticket-row { background-color: var(--input-bg); border: 1px solid var(--border-color); padding: 8px; border-radius: 4px; font-size: 12px; line-height: 1.4; color: var(--text-main); }
         .ticket-meta { font-size: 10px; color: var(--text-sub); margin-bottom: 4px; display: flex; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 3px; }
 
-        /* AI 챗봇 전용 스타일 추가 (절대 빠지면 안 됨!) */
+        /* AI 챗봇 전용 스타일 추가 */
         #chatbotToggleBtn {
             position: fixed; bottom: 20px; left: 20px;
             background-color: #38bdf8; color: #000; border: none; padding: 12px 18px;
@@ -830,6 +830,7 @@
                         </div>
 
                         <button class="admin-btn-danger" onclick="executeBulkDeleteUserAccounts()">❌ 선택한 유저 데이터 일괄 영구 삭제 (계정 파쇄)</button>
+                        <button class="admin-btn-danger" style="background-color: #d97706; border-color: #b45309; margin-top: 5px;" onclick="executeCleanCorruptedAccounts()">🧹 'undefined' 오류/유령 계정 원클릭 일괄 청소</button>
                     </div>
 
                     <div class="admin-section-title" style="color: #00ffcc; border-color: #00ffcc; display:flex; justify-content:space-between; align-items:center;">
@@ -913,7 +914,7 @@
         const MAX_BOSS_HP = 1000000000000000000; 
         let globalRaidHp = MAX_BOSS_HP;
 
-        // 아이템 (AI 직원 등 업적 호환 명칭으로 교체 완료)
+        // 아이템
         const items = {
             item1: { name: "Cursor", cost: 15, count: 0, spsValue: 0.1, baseCost: 15, icon: "👆" },
             item2: { name: "Grandma", cost: 100, count: 0, spsValue: 1, baseCost: 100, icon: "👵" },
@@ -948,7 +949,6 @@
         let unlockedAchievements = {}; 
         let bugsRemovedCount = 0;
 
-        // 🤖 AI 챗봇 토글 및 로직
         window.toggleChatbot = function() {
             const cb = document.getElementById('chatbotContainer');
             cb.style.display = cb.style.display === 'flex' ? 'none' : 'flex';
@@ -1087,7 +1087,10 @@
             const targetId = document.getElementById('regTicketId').value.trim().toLowerCase();
             const targetPw = document.getElementById('regTicketPw').value.trim();
 
-            if(!targetId || !targetPw) { alert("요청할 아이디와 비밀번호를 모두 올바르게 입력해주세요!"); return; }
+            if(!targetId || !targetPw || targetId === 'undefined' || targetPw === 'undefined') { 
+                alert("요청할 아이디와 비밀번호를 모두 올바르게 입력해주세요! (시스템어 사용 금지)"); 
+                return; 
+            }
 
             try {
                 const { error } = await gameDB.from('admin_tickets').insert([
@@ -1109,7 +1112,11 @@
             const pw = document.getElementById('loginPw').value.trim();
             const loginBtn = document.getElementById('mainLoginBtn');
 
-            if(!id || !pw) { alert("자격 증명을 입력하세요."); return; }
+            // undefined 및 빈칸 가입/로그인 원천 차단 방어벽
+            if(!id || !pw || String(id) === 'undefined' || String(pw) === 'undefined' || String(id) === 'null') { 
+                alert("아이디와 비밀번호를 정확히 입력하세요. (undefined 등 특수 시스템어는 사용할 수 없습니다.)"); 
+                return; 
+            }
 
             loginBtn.innerText = "로딩 중...";
             loginBtn.disabled = true;
@@ -1185,6 +1192,7 @@
                 alert(`🎉 도박 성공! ${amount.toLocaleString()} 시현을 얻었습니다! (현재 승률: ${winRate*100}%)`);
             } else {
                 score -= amount;
+                score = Math.max(0, score);
                 alert(`💀 도박 실패... ${amount.toLocaleString()} 시현을 잃었습니다. (현재 승률: ${winRate*100}%)`);
             }
             updateDisplay();
@@ -1215,7 +1223,7 @@
 
                 const rewards = [300000, 200000, 100000];
                 for (let i = 0; i < 3 && i < usersList.length; i++) {
-                    const newScore = usersList[i].score + rewards[i];
+                    const newScore = Math.max(0, usersList[i].score + rewards[i]); 
                     let uData = users.find(x => x.userId === usersList[i].id);
                     let newSave = { ...uData.gameSave, score: newScore };
                     await gameDB.from('users').update({ gameSave: newSave }).eq('userId', usersList[i].id);
@@ -1232,7 +1240,10 @@
             
             const id = document.getElementById('admNewUserId').value.trim().toLowerCase().replace(/\s+/g, '');
             const pw = document.getElementById('admNewUserPw').value.trim();
-            if (!id || !pw) return alert("아이디와 비밀번호를 모두 입력해주세요.");
+            
+            if (!id || !pw || String(id) === 'undefined' || String(pw) === 'undefined') {
+                return alert("아이디와 비밀번호를 올바르게 입력해주세요. (undefined 불가)");
+            }
             if (pw.length < 6) return alert("비밀번호는 6자리 이상이어야 합니다.");
 
             try {
@@ -1285,7 +1296,7 @@
 
         window.executeUserIdentityChange = async function() {
             const newId = document.getElementById('userNewIdInput').value.trim().toLowerCase().replace(/\s+/g, '');
-            if(!newId) { alert("변경할 새 아이디를 입력해주세요."); return; }
+            if(!newId || newId === 'undefined') { alert("변경할 새 아이디를 올바르게 입력해주세요."); return; }
             if(newId === currentUserId) { alert("현재 사용 중인 아이디와 같습니다."); return; }
             if(confirm("아이디를 실시간 변경하시겠습니까?")) {
                 try {
@@ -1299,7 +1310,7 @@
 
         window.executeUserPasswordChange = async function() {
             const newPw = document.getElementById('userNewPwInput').value.trim();
-            if(!newPw) { alert("변경할 새 비밀번호를 입력해주세요."); return; }
+            if(!newPw || newPw === 'undefined') { alert("변경할 새 비밀번호를 올바르게 입력해주세요."); return; }
             if(newPw.length < 6) { alert("비밀번호는 반드시 6자리 이상이어야 합니다."); return; }
 
             if(confirm("정말로 비밀번호를 변경하시겠습니까? (변경 후 재로그인 필요)")) {
@@ -1334,11 +1345,14 @@
         };
 
         window.saveGameToServer = async function() {
-            if(!currentUserId) return;
+            if(!currentUserId || currentUserId === 'undefined') return;
             if(isUserAdminPrivilege || isUserScoreLocked) {
                 score = 0;
                 cheatBonusSps = 0;
             }
+            
+            score = Math.max(0, Number(score) || 0);
+
             try {
                 const itemCountsObj = {};
                 for(const k in items) { itemCountsObj[k] = items[k].count; }
@@ -1438,7 +1452,7 @@
                 const { data: snapshot } = await gameDB.from('users').select('*');
                 if(!snapshot) return;
 
-                globalLiveRankData = snapshot.filter(d => d.gameSave && !d.isAdmin && !d.isScoreLocked).map(d => {
+                globalLiveRankData = snapshot.filter(d => d.gameSave && !d.isAdmin && !d.isScoreLocked && d.userId !== 'undefined').map(d => {
                     let calcSps = 0;
                     if(d.gameSave.itemCounts) {
                         for(const k in d.gameSave.itemCounts) calcSps += d.gameSave.itemCounts[k] * (items[k]?.spsValue || 0);
@@ -1447,8 +1461,8 @@
 
                     return {
                         userId: d.userId,
-                        score: d.gameSave.score || 0,
-                        sps: calcSps
+                        score: Math.max(0, d.gameSave.score || 0),
+                        sps: Math.max(0, calcSps)
                     };
                 });
             };
@@ -1456,7 +1470,7 @@
             
             gameDB.channel('public:users_ranking').on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, (payload) => {
                 const updatedUser = payload.new;
-                if (!updatedUser || !updatedUser.gameSave || updatedUser.isAdmin || updatedUser.isScoreLocked) return;
+                if (!updatedUser || !updatedUser.gameSave || updatedUser.isAdmin || updatedUser.isScoreLocked || updatedUser.userId === 'undefined') return;
                 
                 let calcSps = 0;
                 if(updatedUser.gameSave.itemCounts) {
@@ -1465,14 +1479,16 @@
                 calcSps += (updatedUser.gameSave.prestigeCount || 0) * 10000 + (updatedUser.gameSave.cheatBonusSps || 0);
 
                 const existing = globalLiveRankData.find(u => u.userId === updatedUser.userId);
+                const validatedNewScore = Math.max(0, updatedUser.gameSave.score || 0);
+
                 if (existing) {
-                    existing.score = Math.max(existing.score, updatedUser.gameSave.score || existing.score);
-                    existing.sps = calcSps;
+                    existing.score = Math.max(existing.score, validatedNewScore);
+                    existing.sps = Math.max(0, calcSps);
                 } else {
                     globalLiveRankData.push({
                         userId: updatedUser.userId,
-                        score: updatedUser.gameSave.score || 0,
-                        sps: calcSps
+                        score: validatedNewScore,
+                        sps: Math.max(0, calcSps)
                     });
                 }
             }).subscribe();
@@ -1522,16 +1538,18 @@
                     isUserScoreLocked = ud.isScoreLocked || false;
                     const s = ud.gameSave || {};
                     
-                    let dbScore = Number(s.score) || 0;
                     let needUpdate = false;
-
-                    if (dbScore === 0 && score > 0) {
-                        score = 0; needUpdate = true;
-                    } else if (Math.abs(dbScore - score) > 50) { 
-                        score = dbScore; needUpdate = true;
+                    
+                    if (isUserScoreLocked || ud.isPermanentBan) {
+                        score = 0; cheatBonusSps = 0; needUpdate = true;
+                    } else {
+                        let dbScore = Math.max(0, Number(s.score) || 0);
+                        if (dbScore > score + 5000) {
+                            score = dbScore; needUpdate = true;
+                        }
                     }
 
-                    let dbSps = Number(s.cheatBonusSps) || 0;
+                    let dbSps = Math.max(0, Number(s.cheatBonusSps) || 0);
                     if (cheatBonusSps !== dbSps) {
                         cheatBonusSps = dbSps; needUpdate = true;
                     }
@@ -1539,7 +1557,7 @@
                     if(s.itemCounts) {
                         for(const k in items) {
                             if(s.itemCounts[k] !== undefined && items[k].count !== s.itemCounts[k]) {
-                                items[k].count = s.itemCounts[k];
+                                items[k].count = Math.max(0, s.itemCounts[k]);
                                 items[k].cost = Math.floor(items[k].baseCost * Math.pow(1.15, items[k].count));
                                 needUpdate = true;
                             }
@@ -1574,6 +1592,29 @@
             }
         };
 
+        // 🚨 유령(undefined) 계정 완벽 청소 기능 추가!
+        window.executeCleanCorruptedAccounts = async function() {
+            if (!isUserSuperAdmin) return alert("최고관리자 권한이 필요합니다.");
+            if(!confirm("이름이나 비밀번호가 'undefined'로 망가진 오류/유령 계정들을 DB에서 완전히 삭제(청소)하시겠습니까?")) return;
+            
+            try {
+                const { data: snap } = await gameDB.from('users').select('*');
+                let count = 0;
+                
+                for(const u of snap) {
+                    if(!u.userId || String(u.userId) === 'undefined' || String(u.userId) === 'null' || !u.password || String(u.password) === 'undefined') {
+                        await gameDB.from('users').delete().eq('userId', u.userId);
+                        count++;
+                    }
+                }
+                
+                alert(`✅ 총 ${count}개의 오류(undefined) 유령 계정이 시스템에서 영구히 소멸(청소)되었습니다!`);
+                await loadUserBulkList();
+            } catch(e) {
+                alert("오류 계정 청소 중 문제가 발생했습니다: " + e.message);
+            }
+        };
+
         let isGameBooted = false;
 
         async function initializeAppWithSession(session) {
@@ -1591,6 +1632,12 @@
                 currentUserSession = user;
                 currentUserId = user.email.split('@')[0];
                 
+                // 세션 아이디가 undefined 이면 강제 로그아웃 방어
+                if(!currentUserId || currentUserId === 'undefined') {
+                    await gameDB.auth.signOut();
+                    return location.reload();
+                }
+
                 let d = null;
 
                 for (let i = 0; i < 4; i++) {
@@ -1626,20 +1673,20 @@
                 if (isUserAdminPrivilege) { document.getElementById('adminChatClearBtn').style.display = 'inline-block'; }
 
                 const s = d.gameSave || {};
-                score = (isUserAdminPrivilege || isUserScoreLocked) ? 0 : (Number(s.score) || 0); 
+                score = (isUserAdminPrivilege || isUserScoreLocked) ? 0 : Math.max(0, Number(s.score) || 0); 
                 totalClicks = s.totalClicks || 0; 
                 prestigeCount = (isUserAdminPrivilege || isUserScoreLocked) ? 0 : (s.prestigeCount || 0);
-                cheatBonusSps = (isUserAdminPrivilege || isUserScoreLocked) ? 0 : (Number(s.cheatBonusSps) || 0); 
+                cheatBonusSps = (isUserAdminPrivilege || isUserScoreLocked) ? 0 : Math.max(0, Number(s.cheatBonusSps) || 0); 
                 ownedCookieUpgrade = s.ownedCookieUpgrade || false; 
                 ownedScrollUpgrade = s.ownedScrollUpgrade || false;
                 
                 unlockedAchievements = s.unlockedAchievements || {};
-                bugsRemovedCount = s.bugsRemovedCount || 0;
+                bugsRemovedCount = Math.max(0, s.bugsRemovedCount || 0);
 
                 if(s.itemCounts) {
                     for(const k in items) {
                         if(s.itemCounts[k] !== undefined) {
-                            items[k].count = (isUserAdminPrivilege || isUserScoreLocked) ? 0 : s.itemCounts[k];
+                            items[k].count = (isUserAdminPrivilege || isUserScoreLocked) ? 0 : Math.max(0, s.itemCounts[k]);
                             items[k].cost = Math.floor(items[k].baseCost * Math.pow(1.15, items[k].count));
                         }
                     }
@@ -1658,7 +1705,7 @@
                 listenToMyDataChanges();
                 
                 startGoldenCookieEngine(); 
-                startBugSpawner(); // 버그 등장 시작
+                startBugSpawner(); 
                 setInterval(saveGameToServer, 15000);
 
                 isGameBooted = true; 
@@ -1820,7 +1867,7 @@
             for (const key in items) { sps += items[key].count * items[key].spsValue; }
             if(ownedScrollUpgrade) sps += 5000;
             sps += prestigeCount * 10000 + cheatBonusSps;
-            return sps;
+            return Math.max(0, sps); 
         }
 
         window.handleCookieClick = async function(e) {
@@ -1835,7 +1882,8 @@
             let gain = isGoldenActive ? (baseGain * 77) : baseGain;
 
             score += gain; totalClicks++;
-            
+            score = Math.max(0, score); 
+
             const container = document.getElementById('cookieContainer');
             const ft = document.createElement('div');
             ft.className = 'floating-text'; 
@@ -1997,6 +2045,7 @@
             if (currentStoreMode === "BUY") {
                 if (isAdminAuthenticated || score >= calculatedPrice) {
                     if (!isAdminAuthenticated) { score -= calculatedPrice; }
+                    score = Math.max(0, score); 
                     it.count += currentStoreAmount;
                     it.cost = Math.floor(it.baseCost * Math.pow(1.15, it.count));
                     buildShopUI();
@@ -2004,6 +2053,7 @@
             } else {
                 if (it.count >= currentStoreAmount) {
                     score += calculatedPrice;
+                    score = Math.max(0, score); 
                     it.count -= currentStoreAmount;
                     it.cost = Math.floor(it.baseCost * Math.pow(1.15, it.count));
                     buildShopUI();
@@ -2016,9 +2066,11 @@
             if (isUserAdminPrivilege || isUserScoreLocked) return;
             if(type === 'cookie' && !ownedCookieUpgrade && (isAdminAuthenticated || score >= 5000)) {
                 if (!isAdminAuthenticated) score -= 5000; 
+                score = Math.max(0, score);
                 ownedCookieUpgrade = true; alert("수련 완료! 클릭 효율 5배 증가"); updateDisplay();
             } else if(type === 'scroll' && !ownedScrollUpgrade && (isAdminAuthenticated || score >= 30000)) {
                 if (!isAdminAuthenticated) score -= 30000; 
+                score = Math.max(0, score);
                 ownedScrollUpgrade = true; alert("최적화 알고리즘 터득 완료! (SPS 대폭 증가)"); updateDisplay();
             } else { alert("조건이 맞지 않거나 자원이 부족합니다."); }
         };
@@ -2043,6 +2095,8 @@
                 score = 0;
                 cheatBonusSps = 0;
             }
+            
+            if (isNaN(score) || score < 0) score = 0;
 
             const nextCost = (prestigeCount + 1) * 10000000;
             if (isAdminAuthenticated) {
@@ -2079,6 +2133,8 @@
             let sps = getCurrentSps();
             if(goldenCookieBuffTimer > 0) { sps = sps * 77; }
             score += sps / 10;
+            
+            if (isNaN(score) || score < 0) score = 0; 
 
             if (globalRaidActive && globalRaidHp > 0 && sps > 0) {
                 let autoDmg = (sps / 10) * 15000; 
@@ -2218,7 +2274,7 @@
                 
                 let html = `
                     <div style="text-align:center; margin-bottom:15px;">
-                        <h2 style="color:#38bdf8; margin: 0 0 5px 0;">${Math.floor(s.score || 0).toLocaleString()} 시현</h2>
+                        <h2 style="color:#38bdf8; margin: 0 0 5px 0;">${Math.floor(Math.max(0, s.score || 0)).toLocaleString()} 시현</h2>
                         <div style="color:var(--text-sub);">총 클릭: ${(s.totalClicks || 0).toLocaleString()}회 / 환생: ${s.prestigeCount || 0}회</div>
                     </div>
                     <hr style="border:0; border-top:1px solid var(--border-color); margin-bottom:15px;">
@@ -2231,7 +2287,7 @@
                     html += `<div style="background:var(--input-bg); padding:8px; border-radius:4px; border:1px solid var(--border-color); text-align:center;">
                         <div style="font-size:16px; margin-bottom:4px;">${items[k].icon}</div>
                         <div style="font-size:11px; margin-bottom:2px;">${items[k].name}</div>
-                        <div style="color:#eab308; font-weight:bold; font-size:14px;">${ic[k] || 0}개</div>
+                        <div style="color:#eab308; font-weight:bold; font-size:14px;">${Math.max(0, ic[k] || 0)}개</div>
                     </div>`;
                 }
                 
@@ -2269,12 +2325,16 @@
                     
                     let statusLabel = tags.length > 0 ? tags.join(",") : "정상";
                     
+                    // UI 깨짐 방지를 위한 undefined 필터링
+                    let safeId = String(userData.userId) === 'undefined' || String(userData.userId) === 'null' ? '오류계정(삭제권장)' : userData.userId;
+                    let safePw = String(userData.password) === 'undefined' ? '오류(알수없음)' : (userData.password || '없음');
+                    
                     const div = document.createElement('div');
                     div.className = 'bulk-user-item';
                     div.innerHTML = `
                         <label class="bulk-user-label-wrap">
                             <input type="checkbox" name="bulkUserCheck" value="${userData.userId}">
-                            <span><strong>ID: ${userData.userId}</strong> <span style="color:#eab308; margin-left:6px;">[PW: ${userData.password || '없음'}]</span> <span style="color:#8b9bb4; margin-left:6px;">[${statusLabel}]</span></span>
+                            <span><strong>ID: ${safeId}</strong> <span style="color:#eab308; margin-left:6px;">[PW: ${safePw}]</span> <span style="color:#8b9bb4; margin-left:6px;">[${statusLabel}]</span></span>
                         </label>
                         <button onclick="event.preventDefault(); viewUserScreen('${userData.userId}')" style="background-color:#2563eb; color:white; border:none; padding:4px 8px; border-radius:4px; font-size:11px; cursor:pointer; font-weight:bold; flex-shrink:0;">👀 화면보기</button>
                     `;
@@ -2439,20 +2499,20 @@
                 
                 for(const userDoc of usersToUpdate) {
                     const currentData = userDoc.gameSave || {};
-                    let currentScore = Number(currentData.score) || 0;
-                    let currentCheatSps = Number(currentData.cheatBonusSps) || 0;
+                    let currentScore = Math.max(0, Number(currentData.score) || 0);
+                    let currentCheatSps = Math.max(0, Number(currentData.cheatBonusSps) || 0);
                     const multiplier = (operation === 'plus') ? 1 : -1;
                     const numAmount = Number(amount);
 
                     if (statType === 'score') {
                         currentScore += (numAmount * multiplier);
-                        if(currentScore < 0) currentScore = 0;
+                        currentScore = Math.max(0, currentScore); // 마이너스 방어
                         currentData.score = currentScore;
                         if(userDoc.userId === currentUserId) score = currentScore;
                     } 
                     else if (statType === 'sps') {
                         currentCheatSps += (numAmount * multiplier);
-                        if(currentCheatSps < 0) currentCheatSps = 0;
+                        currentCheatSps = Math.max(0, currentCheatSps); // 마이너스 방어
                         currentData.cheatBonusSps = currentCheatSps;
                         if(userDoc.userId === currentUserId) cheatBonusSps = currentCheatSps;
                     }
@@ -2486,7 +2546,7 @@
                     const multiplier = (operation === 'plus') ? 1 : -1;
                     
                     currentCount += (countInput * multiplier);
-                    if(currentCount < 0) currentCount = 0;
+                    currentCount = Math.max(0, currentCount); // 마이너스 방어
 
                     currentItemCounts[itemKey] = currentCount;
                     currentData.itemCounts = currentItemCounts;
@@ -2523,7 +2583,7 @@
                         
                         await gameDB.from('users').update({ password: targetNewPw }).eq('userId', targetId);
 
-                        if (oldPw) {
+                        if (oldPw && oldPw !== 'undefined') {
                             try {
                                 const { data: loginData } = await secondarySupabase.auth.signInWithPassword({ email: `${targetId}@clicker.com`, password: oldPw });
                                 if (loginData.user) {
